@@ -37,7 +37,7 @@ out_dir = paste0(main_dir,"LD_B_AST_analysis_output/")
 gr_tab = read_csv("data_TREM2_michael/A_input/group_tab.csv") # metadata table with group and sample information for all samples in the dataset, used for plotting and stats
 
 ###load seurat dataset --> cleaned astrocytes
-seur = qread(file = paste0(main_dir, "data_TREM2_michael/B_load_from_scflow_subcluster/LD_B03a_seur.qs"))
+seur = qread(file = paste0(out_dir, "LD_B03a_seur.qs"))
 
 #add plaque density (Amyloid plaques)
 t1 = read_csv("data_TREM2_michael/A_input/TREM2_plaque_data_Sam.csv")
@@ -60,14 +60,14 @@ GOI$subtype_markers = t1$gene[t1$level %in% c("Astrocyte_subtypes")]
 t1 = read_csv(paste0(main_dir,"data_TREM2_michael/A_input/Transcription Factors hg19 - Fantom5_21-12-21.csv"))
 GOI$TF = t1$Symbol
 
-### get all subtype markers from Gazestani et al., 2023, Manucso et al., 2024 --> 
+### get all subtype markers from Gazestani et al., 2023, Manucso et al., 2024 --> later used to copare our astrocyte subclusters
 
 subtype_markers = list()
 
 t1 = read_csv(paste0(main_dir,"data_TREM2_michael/A_input/Green24_S2_subpopulation_markers.csv"))
 
-for (cl in unique(t1$cluster)){
-  t2 = t1[t1$cluster == cl & t1$avg_log2FC>log2(1.2) & t1$p_val_adj<0.05,]
+for (cl in unique(t1$state)){
+  t2 = t1[t1$state == cl & t1$avg_log2FC>log2(1.2) & t1$p_val_adj<0.05,]
   subtype_markers$Mancuso24[[cl]] = t2$gene
 }
 
@@ -140,7 +140,7 @@ pal_dist = function(v){
 ###########################################################
 # save cluster//cell_type/cell_class labels to dataset
 ###########################################################
-
+# maps the Seurat clusters (at resolution 0.3) to the manually assigned cluster names and cell types using table from LD_B03a
 DefaultAssay(seur) = "SCT"
 
 #add clusters with default resolution

@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -lselect=1:ncpus=32:mem=500gb:ompthreads=32
+#PBS -lselect=1:ncpus=16:mem=256gb:ompthreads=32
 #PBS -lwalltime=8:00:00
 #PBS -o std_out.txt
 #PBS -e std_err.txt
