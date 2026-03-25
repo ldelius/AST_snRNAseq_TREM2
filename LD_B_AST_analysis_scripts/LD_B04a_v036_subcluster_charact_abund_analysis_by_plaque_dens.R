@@ -20,6 +20,7 @@ library(clusterProfiler) # GO enrichment
 library(DOSE) # GO enrichment
 library(org.Hs.eg.db) # GO enrichment
 library(ggrepel)
+library(presto)
 # the not called packages might be dependencies from other packages, therefore i keep them for now
 
 ### define directories and script index
@@ -226,7 +227,7 @@ dev.off()
 ########################################################################################
 ### add plots split by group vs repl colored by cluster_name
 ########################################################################################
-
+# this adds UMAPS per sample to check whether clusters are consistent across individual samples
 seur = seur0
 
 cells = colnames(seur@assays$SCT@scale.data)
@@ -285,7 +286,7 @@ dev.off()
 ################################################################################
 #labelled dotplot for marker module activity by cluster (subtype marker set)
 ################################################################################
-
+# do the cluster resamble published subtypes based on the two publications? 
 seur = seur0
 
 for(subtype_dataset in names(subtype_markers)){
@@ -326,7 +327,7 @@ dev.off()
 #############################################################################
 
 ###identify markers
-
+# tests every gene in the SCT assay across all clusters
 seur = seur0
 
 t1 <- FindAllMarkers(seur,group.by = "cluster_name", only.pos = TRUE)
@@ -336,7 +337,7 @@ t2 = t1[order(t1$cluster, -t1$avg_log2FC),]
 seur_markers = t2
 
 write_csv(seur_markers, file = paste0(out_dir,script_ind, "Seurat_markers.csv"))
-
+# tells us for each of the clusters, which genes are specifically upregulated in that cluster relative to the other astrocytes, and by how much
 
 ###plot top10 markers per cluster (max 200 cells/cluster)
 
@@ -346,7 +347,7 @@ top_markers = seur_markers %>%
   slice_head(n = 10) %>%
   ungroup()
 
-#subsample seur
+#subsample seur (done for the following DoHeatmap)
 meta = seur@meta.data
 v1 = NULL
 
@@ -363,6 +364,8 @@ seur_plot = seur[, v1]
 
 
 #plot
+# this step serves as a visual quality check. It shows the top markers for 200 cells per cluster (one column per cell).
+# if there is a biological meaningfuls distinction, we should see a clear pattern of marker expression across clusters.
 p1 = DoHeatmap(seur_plot, group.by = "cluster_name", slot = "data", 
                features = top_markers$gene) + NoLegend()
 
@@ -371,6 +374,7 @@ pdf(file = paste0(out_dir,script_ind, "Seurat_markers_top10_heatmap.pdf"),
 plot(p1)
 dev.off()
 
+# One dot per gene per cluster with the full dataset
 p1 = DotPlot(seur, features = unique(top_markers$gene), 
              group.by = "cluster_name", scale.by = "size") + RotatedAxis()+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))+
@@ -382,8 +386,9 @@ plot(p1)
 dev.off()
 
 
-### GO analysis
-
+### Gene Ontology (GO) analysis
+# standardised database for gene functions, and biological processes
+# uses all markers from the filtered FindAllMarkers output to check "are there any biological processes that appear in this gene list more often than expected by chance?
 GO_list = list()
 GO_results_tab = NULL
 
@@ -395,7 +400,7 @@ for (cl in cluster_names){
   ego = enrichGO(gene         = seur_markers$gene[seur_markers$cluster == cl],
                  OrgDb         = org.Hs.eg.db,
                  keyType       = 'SYMBOL',
-                 ont           = "BP",
+                 ont           = "BP", # restricts to biological processes
                  pAdjustMethod = "BH",
                  pvalueCutoff  = 0.01,
                  qvalueCutoff  = 0.05)
@@ -419,6 +424,7 @@ save(GO_list, file = paste0(out_dir,script_ind, "Seurat_markers_GO_analysis.rda"
 
 
 ### visualise GO analysis (network plot)
+# each clusters with >5 significantly enriched GO terms gets a network plot. 
 
 pl = list()
 
@@ -499,7 +505,7 @@ dev.off()
 #############################################################################
 # cluster abundance quantification
 #############################################################################
-
+# quantifies how many cells for each sample end up in each ubcluster to answer "Are certain astrocyte subtypes more or less abundant in certain experimental groups?"
 seur = seur0
 
 meta = seur@meta.data
@@ -598,7 +604,7 @@ gc()
 ###########################################################
 # sccomp differential cell cluster abundance analysis
 ###########################################################
-
+# adds statistics on the abundance testing form just before
 seur$group = factor(seur$group, levels = gr) #required to fix order of groups
 
 sccomp_result = 
@@ -640,7 +646,8 @@ if (nrow(t3)>0){
 ###########################################################
 # plot cluster abundance vs plaque_dens by TREM2Variant
 ###########################################################
-
+# this section asks whther the abundance of certain clusters correlates with plaque density, and whether this correlation is different between TREM2 variant carriers and non-carriers
+# for each clsuter we see: as plaque pathology increases, does the cluster ge more or less abundant? and does this differ between the variants?
 t1 = stat_tab
 
 t1$plaque_dens = gr_tab$plaque_dens[match(t1$sample, gr_tab$sample)]
@@ -677,7 +684,7 @@ dev.off()
 ###########################################################
 # plot cluster abundance vs PHF1 by TREM2Variant
 ###########################################################
-
+# same as just above but for tau pathology
 t1 = stat_tab
 
 t1$pctPHF1PositiveArea = gr_tab$pctPHF1PositiveArea[match(t1$sample, gr_tab$sample)]
@@ -713,7 +720,7 @@ dev.off()
 ###########################################################
 # sccomp differential cell cluster abundance analysis by TREM2Variant vs plaque_dens
 ###########################################################
-
+# adds statistic to the questions jsut answered before
 seur = seur0
 
 seur$TREM2Variant = factor(seur$TREM2Variant, levels = unique(gr_tab$TREM2Variant))
@@ -757,7 +764,7 @@ if (nrow(t3)>0){
 ###########################################################
 # sccomp differential cell cluster abundance analysis by TREM2Variant vs plaque_dens corrected for APOE and CD33
 ###########################################################
-
+# same as sccomp just before but adds correction for APOE and CD33 genotype
 seur = seur0
 
 seur$TREM2Variant = factor(seur$TREM2Variant, levels = unique(gr_tab$TREM2Variant))
