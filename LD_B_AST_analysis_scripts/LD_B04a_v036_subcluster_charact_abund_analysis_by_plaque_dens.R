@@ -29,7 +29,7 @@ main_dir = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2/"
 setwd(main_dir)
 
 #specify script/output index as prefix for file names
-script_ind = "LD_B04a_"
+script_ind = "LD_B04a_v02_" # this is version 02 now, cause I changed cluster s1 from SLC1A2 to GFAP.
 
 #specify output directory
 out_dir = paste0(main_dir,"LD_B_AST_analysis_output/")
@@ -44,6 +44,9 @@ seur = qread(file = paste0(out_dir, "LD_B03a_seur.qs"))
 t1 = read_csv("data_TREM2_michael/A_input/TREM2_plaque_data_Sam.csv")
 gr_tab$plaque_dens = t1$TotalDensity[match(gr_tab$BrainBankNetworkIDFormatted, t1$BrainBankNetworkIDFormatted)]
 seur$plaque_dens = t1$TotalDensity[match(seur$BrainBankNetworkIDFormatted, t1$BrainBankNetworkIDFormatted)]
+
+#add tau pathology (PHF1) from group table
+seur$pctPHF1PositiveArea = gr_tab$pctPHF1PositiveArea[match(seur$sample, gr_tab$sample)]
 
 #load subset dataset
 clust_tab = read_csv(paste0(out_dir,"LD_B03a_cluster_assignment.csv")) # adds the CSV with manually assigned cluster names
@@ -135,6 +138,25 @@ pal_dist = function(v){
     p2 = sample(p2)
   }
   return(p2)
+}
+
+
+#manual credible interval plot (replaces plot_1D_intervals)
+#  shows posterior effect estimate per cluster with 95% credible intervals,
+#  faceted by model parameter, coloured by FDR significance
+plot_sccomp_intervals = function(sccomp_res, title_label = ""){
+  t_plot = sccomp_res[!is.na(sccomp_res$factor),]
+  if (nrow(t_plot) == 0) return(NULL)
+  t_plot$sig = ifelse(t_plot$c_FDR < 0.05, "FDR < 0.05", "n.s.")
+  ggplot(t_plot, aes(x = c_effect, y = cluster_name, colour = sig)) +
+    geom_point(size = 2) +
+    geom_errorbarh(aes(xmin = c_lower, xmax = c_upper), height = 0.3) +
+    geom_vline(xintercept = 0, linetype = "dashed", colour = "grey40") +
+    scale_colour_manual(values = c("FDR < 0.05" = "red3", "n.s." = "grey50")) +
+    facet_wrap(~parameter, scales = "free_x") +
+    labs(x = "Effect (logit scale)", y = "", colour = "", title = title_label) +
+    theme_light() +
+    theme(strip.text = element_text(size = 7))
 }
 
 
@@ -276,9 +298,20 @@ pdf(file = paste0(out_dir,script_ind, "Cell_markers_dotplot_clusters_labelled.pd
 plot(p1)
 dev.off()
 
-pdf(file = paste0(out_dir,script_ind, "Cell_subset_markers_dotplot_clusters_labelled.pdf"), 
+pdf(file = paste0(out_dir,script_ind, "Cell_subset_markers_dotplot_clusters_labelled.pdf"),
     width = 15, height = 4)
 plot(p2)
+dev.off()
+
+# size-adjusted version: wider figure, smaller gene labels
+p2_adj = DotPlot(seur, features = intersect(GOI$subtype_markers, rownames(seur)),
+                 group.by = "cluster_name", scale.by = "size") + RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8)) +
+  scale_y_discrete(limits = cluster_names)
+
+pdf(file = paste0(out_dir, script_ind, "Cell_subset_markers_dotplot_clusters_labelled_size_adj.pdf"),
+    width = 25, height = 5)
+plot(p2_adj)
 dev.off()
 
 
@@ -310,14 +343,40 @@ p2 = DotPlot(seur, features = colnames(seur@meta.data)[grepl("Gazestani", colnam
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))+
   scale_y_discrete(limits = cluster_names)
 
-pdf(file = paste0(out_dir,script_ind, "Cell_markers_module_score_dotplot_Mancuso24.pdf"), 
+pdf(file = paste0(out_dir,script_ind, "Cell_markers_module_score_dotplot_Mancuso24.pdf"),
     width = 6, height = 8)
 plot(p1)
 dev.off()
 
-pdf(file = paste0(out_dir,script_ind, "Cell_markers_module_score_dotplot_Gazestani23.pdf"), 
+pdf(file = paste0(out_dir,script_ind, "Cell_markers_module_score_dotplot_Gazestani23.pdf"),
     width = 6, height = 8)
 plot(p2)
+dev.off()
+
+# Mancuso24: size-adjusted wide overview
+mancuso_cols = colnames(seur@meta.data)[grepl("Mancuso24", colnames(seur@meta.data))]
+
+p_mancuso_adj = DotPlot(seur, features = mancuso_cols,
+                        group.by = "cluster_name", scale.by = "size") + RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 6)) +
+  scale_y_discrete(limits = cluster_names)
+
+pdf(file = paste0(out_dir, script_ind, "Cell_markers_module_score_dotplot_Mancuso24_size_adj.pdf"),
+    width = 25, height = 6)
+plot(p_mancuso_adj)
+dev.off()
+
+# Mancuso24: astrocyte subtypes only
+mancuso_ast_cols = mancuso_cols[grepl("Mancuso24_Ast", mancuso_cols)]
+
+p_mancuso_ast = DotPlot(seur, features = mancuso_ast_cols,
+                        group.by = "cluster_name", scale.by = "size") + RotatedAxis() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8)) +
+  scale_y_discrete(limits = cluster_names)
+
+pdf(file = paste0(out_dir, script_ind, "Cell_markers_module_score_dotplot_Mancuso24_AST_only.pdf"),
+    width = 8, height = 6)
+plot(p_mancuso_ast)
 dev.off()
 
 
@@ -346,6 +405,8 @@ top_markers = seur_markers %>%
   dplyr::filter(avg_log2FC > 1) %>%
   slice_head(n = 10) %>%
   ungroup()
+
+write_csv(top_markers, file = paste0(out_dir, script_ind, "Seurat_markers_top10_per_cluster.csv"))
 
 #subsample seur (done for the following DoHeatmap)
 meta = seur@meta.data
@@ -607,39 +668,159 @@ gc()
 # adds statistics on the abundance testing form just before
 seur$group = factor(seur$group, levels = gr) #required to fix order of groups
 
-sccomp_result = 
+sccomp_result =
   seur |>
-  sccomp_estimate( 
-    formula_composition = ~ group, 
-    .sample =  sample, 
-    .cell_group = cluster_name, 
+  sccomp_glm(
+    formula_composition = ~ group,
+    .sample =  sample,
+    .cell_group = cluster_name,
     bimodal_mean_variability_association = TRUE,
-    cores = 8 
-  ) |> 
-  #sccomp_remove_outliers(cores = 8) |> # Optional
-  sccomp_test()
+    cores = 8
+  )
+
+message("sccomp_result columns: ", paste(names(sccomp_result), collapse = ", "))
+
+# handle sccomp version differences: column may be "factor" or "parameter"
+if (!"factor" %in% names(sccomp_result) & "parameter" %in% names(sccomp_result)){
+  sccomp_result$factor = sccomp_result$parameter
+}
 
 write_csv(sccomp_result, paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group.csv"))
 
 
-pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates.pdf"), 
-    width = 8, height = 5)
-sccomp_result |> 
-  plot_1D_intervals()
+### credible interval estimates plot (originally plot_1D_intervals)
+# try original function, save to _orig file
+tryCatch({
+  pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_orig.pdf"),
+      width = 8, height = 5)
+  sccomp_result |> plot_1D_intervals()
+  dev.off()
+}, error = function(e) {
+  message("plot_1D_intervals (group) failed: ", conditionMessage(e))
+  try(dev.off(), silent = TRUE)
+})
+
+# manual ggplot version
+pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates.pdf"),
+    width = 10, height = 6)
+p = plot_sccomp_intervals(sccomp_result, title_label = "sccomp: ~ group (estimates)")
+if (!is.null(p)) print(p)
 dev.off()
 
-### plot boxplot if any comparison significant difference (else creates error)
+
+### boxplot for significant clusters (originally sccomp_boxplot)
 t1 = sccomp_result
 t2 = t1[!is.na(t1$factor),]
 t3 = t2[t2$c_FDR<0.05,]
 
 if (nrow(t3)>0){
-  pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot.pdf"), 
-      width = 8, height = 8)
-  sccomp_result |> 
-    sccomp_boxplot(factor = "group")
-  dev.off()
+  # try original function, save to _orig file
+  tryCatch({
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_orig.pdf"),
+        width = 8, height = 8)
+    sccomp_result |> sccomp_boxplot(factor = "group")
+    dev.off()
+  }, error = function(e) {
+    message("sccomp_boxplot (group) failed: ", conditionMessage(e))
+    try(dev.off(), silent = TRUE)
+  })
+
+  # manual ggplot version
+  tryCatch({
+    sig_clusters = unique(t3$cluster_name)
+    plot_data = stat_tab[stat_tab$cluster %in% sig_clusters,]
+
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot.pdf"),
+        width = 8, height = 8)
+    p = ggplot(plot_data, aes(x = group, y = fract_sample, fill = group)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(width = 0.2, size = 1) +
+      facet_wrap(~cluster, scales = "free_y") +
+      scale_fill_manual(values = pal(gr)) +
+      labs(y = "Fraction of sample", title = "Significant clusters - abundance by group") +
+      theme_light()
+    print(p)
+    dev.off()
+  }, error = function(e) { message("Boxplot by group failed: ", conditionMessage(e)); try(dev.off(), silent=TRUE) })
 }
+
+
+### abundance barplot with sccomp significance asterisks
+tryCatch({
+  t1 = stat_tab
+  t2 = t1 %>% group_by(cluster, group) %>%
+    summarise(mean_fract = mean(fract_sample), sd_fract = sd(fract_sample), .groups = "drop")
+
+  t1$group = factor(t1$group, levels = gr)
+  t2$group = factor(t2$group, levels = gr)
+
+  # extract significance from sccomp result
+  # parameter values are like "groupControl_R47H"; strip prefix to get group name
+  sig_tab = sccomp_result %>%
+    filter(factor == "group") %>%
+    mutate(
+      group = sub("^group", "", parameter),
+      sig_label = case_when(
+        c_FDR < 0.05 ~ "**",
+        c_FDR < 0.1  ~ "*",
+        TRUE ~ ""
+      )
+    ) %>%
+    filter(sig_label != "") %>%
+    select(cluster_name, group, sig_label, c_FDR)
+
+  if (nrow(sig_tab) > 0){
+    sig_tab = sig_tab %>%
+      left_join(t2, by = c("cluster_name" = "cluster", "group" = "group")) %>%
+      mutate(y_pos = mean_fract + sd_fract + max(t2$mean_fract, na.rm = TRUE) * 0.02)
+
+    sig_tab$group = factor(sig_tab$group, levels = gr)
+
+    n_groups = length(gr)
+    dodge_width = 0.7
+    sig_tab = sig_tab %>%
+      mutate(
+        x_num = as.numeric(factor(cluster_name, levels = cluster_names)),
+        group_idx = as.numeric(group),
+        x_dodge = x_num + dodge_width * (group_idx - (n_groups + 1) / 2) / n_groups
+      )
+  }
+
+  p_sig = ggplot() +
+    geom_col(data = t2, aes(x = cluster, y = mean_fract, color = group, group = group),
+             fill = "grey90", position = position_dodge(width = 0.7), width = 0.7, lwd = 0.3) +
+    geom_errorbar(data = t2, aes(x = cluster,
+                                 ymin = mean_fract - sd_fract,
+                                 y = mean_fract,
+                                 ymax = mean_fract + sd_fract,
+                                 color = group,
+                                 group = group),
+                  position = position_dodge(width = 0.7), width = 0.4, lwd = 0.3) +
+    geom_point(data = t1, aes(x = cluster, y = fract_sample, color = group, group = group),
+               position = position_dodge(width = 0.7), size = 0.3, stroke = 0.2) +
+    geom_hline(yintercept = 0) +
+    scale_x_discrete(limits = cluster_names) +
+    scale_color_manual(limits = gr, values = pal(gr)) +
+    scale_fill_manual(limits = gr, values = pal(gr)) +
+    labs(caption = "** p<0.05, * p<0.1 (sccomp FDR vs Control_CV)") +
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+          plot.caption = element_text(size = 7))
+
+  if (nrow(sig_tab) > 0){
+    p_sig = p_sig +
+      geom_text(data = sig_tab, aes(x = x_dodge, y = y_pos, label = sig_label),
+                size = 4, vjust = 0)
+  }
+
+  pdf(file = paste0(out_dir, script_ind, "cell_abundance_by_sample_cluster_sig.pdf"),
+      width = 10, height = 4)
+  print(p_sig)
+  dev.off()
+}, error = function(e) {
+  message("Abundance significance plot failed: ", conditionMessage(e))
+  try(dev.off(), silent = TRUE)
+})
 
 
 
@@ -711,9 +892,48 @@ for (cl in cluster_names){
   
 }
 
-pdf(file = paste0(out_dir,script_ind,"cell_abundance_vs_pctPHF1PositiveArea_by_TREM2Variant_by_cluster.pdf"), 
+pdf(file = paste0(out_dir,script_ind,"cell_abundance_vs_pctPHF1PositiveArea_by_TREM2Variant_by_cluster.pdf"),
     width = 4, height = 3)
 lapply(pl, function(x){x})
+dev.off()
+
+
+###########################################################
+# combined facet regression plots (all clusters in one figure)
+###########################################################
+
+# plaque density combined facet plot
+p_plaque = ggplot(stat_tab, aes(x = plaque_dens, y = fract_sample, color = TREM2Variant)) +
+  geom_hline(yintercept = 0) +
+  geom_smooth(method = "lm") +
+  geom_point(size = 0.8) +
+  scale_color_manual(values = pal(unique(stat_tab$TREM2Variant))) +
+  facet_wrap(~ factor(cluster, levels = cluster_names), scales = "free_y") +
+  labs(x = "Plaque density", y = "Fraction of sample") +
+  theme_light() +
+  theme(strip.text = element_text(size = 7))
+
+pdf(file = paste0(out_dir, script_ind, "cell_abundance_vs_plaque_dens_by_TREM2Variant_facet.pdf"),
+    width = 14, height = 10)
+plot(p_plaque)
+dev.off()
+
+# tau (PHF1) combined facet plot
+t1_tau = stat_tab[!is.na(stat_tab$pctPHF1PositiveArea), ]
+
+p_tau = ggplot(t1_tau, aes(x = pctPHF1PositiveArea, y = fract_sample, color = TREM2Variant)) +
+  geom_hline(yintercept = 0) +
+  geom_smooth(method = "lm") +
+  geom_point(size = 0.8) +
+  scale_color_manual(values = pal(unique(t1_tau$TREM2Variant))) +
+  facet_wrap(~ factor(cluster, levels = cluster_names), scales = "free_y") +
+  labs(x = "% PHF1 positive area", y = "Fraction of sample") +
+  theme_light() +
+  theme(strip.text = element_text(size = 7))
+
+pdf(file = paste0(out_dir, script_ind, "cell_abundance_vs_pctPHF1_by_TREM2Variant_facet.pdf"),
+    width = 14, height = 10)
+plot(p_tau)
 dev.off()
 
 
@@ -726,38 +946,79 @@ seur = seur0
 seur$TREM2Variant = factor(seur$TREM2Variant, levels = unique(gr_tab$TREM2Variant))
 seur = seur[,!is.na(seur$plaque_dens)]
 
-sccomp_result = 
+sccomp_result =
   seur |>
-  sccomp_estimate( 
-    formula_composition = ~ TREM2Variant*plaque_dens, 
-    .sample =  sample, 
-    .cell_group = cluster_name, 
+  sccomp_glm(
+    formula_composition = ~ TREM2Variant*plaque_dens,
+    .sample =  sample,
+    .cell_group = cluster_name,
     bimodal_mean_variability_association = TRUE,
-    cores = 8 
-  ) |> 
-  #sccomp_remove_outliers(cores = 8) |> # Optional
-  sccomp_test()
+    cores = 8
+  )
+
+message("sccomp_result columns: ", paste(names(sccomp_result), collapse = ", "))
+
+if (!"factor" %in% names(sccomp_result) & "parameter" %in% names(sccomp_result)){
+  sccomp_result$factor = sccomp_result$parameter
+}
 
 write_csv(sccomp_result, paste0(out_dir,script_ind,"sccomp_cell_abundance_by_TREM2Variant_vs_plaque_dens.csv"))
 
 
-pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_plaque_dens.pdf"), 
-    width = 8, height = 5)
-sccomp_result |> 
-  plot_1D_intervals()
+### credible interval estimates plot (originally plot_1D_intervals)
+# try original function, save to _orig file
+tryCatch({
+  pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_plaque_dens_orig.pdf"),
+      width = 8, height = 5)
+  sccomp_result |> plot_1D_intervals()
+  dev.off()
+}, error = function(e) {
+  message("plot_1D_intervals (TREM2*plaque) failed: ", conditionMessage(e))
+  try(dev.off(), silent = TRUE)
+})
+
+# manual ggplot version
+pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_plaque_dens.pdf"),
+    width = 10, height = 6)
+p = plot_sccomp_intervals(sccomp_result, title_label = "sccomp: ~ TREM2Variant * plaque_dens (estimates)")
+if (!is.null(p)) print(p)
 dev.off()
 
-### plot boxplot if any comparison significant difference (else creates error)
+
+### boxplot for significant clusters (originally sccomp_boxplot)
 t1 = sccomp_result
 t2 = t1[!is.na(t1$factor),]
 t3 = t2[t2$c_FDR<0.05,]
 
 if (nrow(t3)>0){
-  pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_plaque_dens.pdf"), 
-      width = 8, height = 8)
-  sccomp_result |> 
-    sccomp_boxplot(factor = "TREM2Variant")
-  dev.off()
+  # try original function, save to _orig file
+  tryCatch({
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_plaque_dens_orig.pdf"),
+        width = 8, height = 8)
+    sccomp_result |> sccomp_boxplot(factor = "TREM2Variant")
+    dev.off()
+  }, error = function(e) {
+    message("sccomp_boxplot (TREM2*plaque) failed: ", conditionMessage(e))
+    try(dev.off(), silent = TRUE)
+  })
+
+  # manual ggplot version
+  tryCatch({
+    sig_clusters = unique(t3$cluster_name)
+    plot_data = stat_tab[stat_tab$cluster %in% sig_clusters,]
+
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_plaque_dens.pdf"),
+        width = 8, height = 8)
+    p = ggplot(plot_data, aes(x = TREM2Variant, y = fract_sample, fill = TREM2Variant)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(width = 0.2, size = 1) +
+      facet_wrap(~cluster, scales = "free_y") +
+      scale_fill_manual(values = pal(unique(plot_data$TREM2Variant))) +
+      labs(y = "Fraction of sample", title = "Significant clusters - abundance by TREM2Variant") +
+      theme_light()
+    print(p)
+    dev.off()
+  }, error = function(e) { message("Boxplot by TREM2Variant failed: ", conditionMessage(e)); try(dev.off(), silent=TRUE) })
 }
 
 
@@ -773,38 +1034,243 @@ seur$CD33Group = factor(seur$CD33Group, levels = unique(gr_tab$CD33Group))
 
 seur = seur[,!is.na(seur$plaque_dens)&!is.na(seur$APOEgroup)&!is.na(seur$CD33Group)]
 
-sccomp_result = 
+sccomp_result =
   seur |>
-  sccomp_estimate( 
-    formula_composition = ~ APOEgroup + CD33Group + TREM2Variant*plaque_dens, 
-    .sample =  sample, 
-    .cell_group = cluster_name, 
+  sccomp_glm(
+    formula_composition = ~ APOEgroup + CD33Group + TREM2Variant*plaque_dens,
+    .sample =  sample,
+    .cell_group = cluster_name,
     bimodal_mean_variability_association = TRUE,
-    cores = 8 
-  ) |> 
-  #sccomp_remove_outliers(cores = 8) |> # Optional
-  sccomp_test()
+    cores = 8
+  )
+
+message("sccomp_result columns: ", paste(names(sccomp_result), collapse = ", "))
+
+if (!"factor" %in% names(sccomp_result) & "parameter" %in% names(sccomp_result)){
+  sccomp_result$factor = sccomp_result$parameter
+}
 
 write_csv(sccomp_result, paste0(out_dir,script_ind,"sccomp_cell_abundance_by_TREM2Variant_vs_plaque_dens_corr_APOE_CD33.csv"))
 
 
-pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_plaque_dens_corr_APOE_CD33.pdf"), 
-    width = 8, height = 5)
-sccomp_result |> 
-  plot_1D_intervals()
+### credible interval estimates plot (originally plot_1D_intervals)
+# try original function, save to _orig file
+tryCatch({
+  pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_plaque_dens_corr_APOE_CD33_orig.pdf"),
+      width = 8, height = 5)
+  sccomp_result |> plot_1D_intervals()
+  dev.off()
+}, error = function(e) {
+  message("plot_1D_intervals (TREM2*plaque corr.) failed: ", conditionMessage(e))
+  try(dev.off(), silent = TRUE)
+})
+
+# manual ggplot version
+pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_plaque_dens_corr_APOE_CD33.pdf"),
+    width = 10, height = 6)
+p = plot_sccomp_intervals(sccomp_result, title_label = "sccomp: ~ APOEgroup + CD33Group + TREM2Variant * plaque_dens (estimates)")
+if (!is.null(p)) print(p)
 dev.off()
 
-### plot boxplot if any comparison significant difference (else creates error)
+
+### boxplot for significant clusters (originally sccomp_boxplot)
 t1 = sccomp_result
 t2 = t1[!is.na(t1$factor),]
 t3 = t2[t2$c_FDR<0.05,]
 
 if (nrow(t3)>0){
-  pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_plaque_dens_corr_APOE_CD33.pdf"), 
-      width = 8, height = 8)
-  sccomp_result |> 
-    sccomp_boxplot(factor = "TREM2Variant")
+  # try original function, save to _orig file
+  tryCatch({
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_plaque_dens_corr_APOE_CD33_orig.pdf"),
+        width = 8, height = 8)
+    sccomp_result |> sccomp_boxplot(factor = "TREM2Variant")
+    dev.off()
+  }, error = function(e) {
+    message("sccomp_boxplot (TREM2*plaque corr.) failed: ", conditionMessage(e))
+    try(dev.off(), silent = TRUE)
+  })
+
+  # manual ggplot version
+  tryCatch({
+    sig_clusters = unique(t3$cluster_name)
+    plot_data = stat_tab[stat_tab$cluster %in% sig_clusters,]
+
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_plaque_dens_corr_APOE_CD33.pdf"),
+        width = 8, height = 8)
+    p = ggplot(plot_data, aes(x = TREM2Variant, y = fract_sample, fill = TREM2Variant)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(width = 0.2, size = 1) +
+      facet_wrap(~cluster, scales = "free_y") +
+      scale_fill_manual(values = pal(unique(plot_data$TREM2Variant))) +
+      labs(y = "Fraction of sample", title = "Significant clusters - abundance by TREM2Variant (corr. APOE, CD33)") +
+      theme_light()
+    print(p)
+    dev.off()
+  }, error = function(e) { message("Boxplot by TREM2Variant (corr.) failed: ", conditionMessage(e)); try(dev.off(), silent=TRUE) })
+}
+
+
+###########################################################
+# sccomp differential cell cluster abundance analysis by TREM2Variant vs tau (PHF1)
+###########################################################
+# mirrors the plaque_dens sccomp analyses but uses tau pathology (pctPHF1PositiveArea) instead
+seur = seur0
+
+seur$TREM2Variant = factor(seur$TREM2Variant, levels = unique(gr_tab$TREM2Variant))
+seur = seur[,!is.na(seur$pctPHF1PositiveArea)]
+
+sccomp_result =
+  seur |>
+  sccomp_glm(
+    formula_composition = ~ TREM2Variant*pctPHF1PositiveArea,
+    .sample =  sample,
+    .cell_group = cluster_name,
+    bimodal_mean_variability_association = TRUE,
+    cores = 8
+  )
+
+message("sccomp_result columns: ", paste(names(sccomp_result), collapse = ", "))
+
+if (!"factor" %in% names(sccomp_result) & "parameter" %in% names(sccomp_result)){
+  sccomp_result$factor = sccomp_result$parameter
+}
+
+write_csv(sccomp_result, paste0(out_dir,script_ind,"sccomp_cell_abundance_by_TREM2Variant_vs_PHF1.csv"))
+
+
+### credible interval estimates plot
+tryCatch({
+  pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_PHF1_orig.pdf"),
+      width = 8, height = 5)
+  sccomp_result |> plot_1D_intervals()
   dev.off()
+}, error = function(e) {
+  message("plot_1D_intervals (TREM2*PHF1) failed: ", conditionMessage(e))
+  try(dev.off(), silent = TRUE)
+})
+
+pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_PHF1.pdf"),
+    width = 10, height = 6)
+p = plot_sccomp_intervals(sccomp_result, title_label = "sccomp: ~ TREM2Variant * pctPHF1PositiveArea (estimates)")
+if (!is.null(p)) print(p)
+dev.off()
+
+
+### boxplot for significant clusters
+t1 = sccomp_result
+t2 = t1[!is.na(t1$factor),]
+t3 = t2[t2$c_FDR<0.05,]
+
+if (nrow(t3)>0){
+  tryCatch({
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_PHF1_orig.pdf"),
+        width = 8, height = 8)
+    sccomp_result |> sccomp_boxplot(factor = "TREM2Variant")
+    dev.off()
+  }, error = function(e) {
+    message("sccomp_boxplot (TREM2*PHF1) failed: ", conditionMessage(e))
+    try(dev.off(), silent = TRUE)
+  })
+
+  tryCatch({
+    sig_clusters = unique(t3$cluster_name)
+    plot_data = stat_tab[stat_tab$cluster %in% sig_clusters,]
+
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_PHF1.pdf"),
+        width = 8, height = 8)
+    p = ggplot(plot_data, aes(x = TREM2Variant, y = fract_sample, fill = TREM2Variant)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(width = 0.2, size = 1) +
+      facet_wrap(~cluster, scales = "free_y") +
+      scale_fill_manual(values = pal(unique(plot_data$TREM2Variant))) +
+      labs(y = "Fraction of sample", title = "Significant clusters - abundance by TREM2Variant (PHF1)") +
+      theme_light()
+    print(p)
+    dev.off()
+  }, error = function(e) { message("Boxplot by TREM2Variant (PHF1) failed: ", conditionMessage(e)); try(dev.off(), silent=TRUE) })
+}
+
+
+###########################################################
+# sccomp differential cell cluster abundance analysis by TREM2Variant vs tau (PHF1) corrected for APOE and CD33
+###########################################################
+seur = seur0
+
+seur$TREM2Variant = factor(seur$TREM2Variant, levels = unique(gr_tab$TREM2Variant))
+seur$APOEgroup = factor(seur$APOEgroup, levels = unique(gr_tab$APOEgroup))
+seur$CD33Group = factor(seur$CD33Group, levels = unique(gr_tab$CD33Group))
+
+seur = seur[,!is.na(seur$pctPHF1PositiveArea)&!is.na(seur$APOEgroup)&!is.na(seur$CD33Group)]
+
+sccomp_result =
+  seur |>
+  sccomp_glm(
+    formula_composition = ~ APOEgroup + CD33Group + TREM2Variant*pctPHF1PositiveArea,
+    .sample =  sample,
+    .cell_group = cluster_name,
+    bimodal_mean_variability_association = TRUE,
+    cores = 8
+  )
+
+message("sccomp_result columns: ", paste(names(sccomp_result), collapse = ", "))
+
+if (!"factor" %in% names(sccomp_result) & "parameter" %in% names(sccomp_result)){
+  sccomp_result$factor = sccomp_result$parameter
+}
+
+write_csv(sccomp_result, paste0(out_dir,script_ind,"sccomp_cell_abundance_by_TREM2Variant_vs_PHF1_corr_APOE_CD33.csv"))
+
+
+### credible interval estimates plot
+tryCatch({
+  pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_PHF1_corr_APOE_CD33_orig.pdf"),
+      width = 8, height = 5)
+  sccomp_result |> plot_1D_intervals()
+  dev.off()
+}, error = function(e) {
+  message("plot_1D_intervals (TREM2*PHF1 corr.) failed: ", conditionMessage(e))
+  try(dev.off(), silent = TRUE)
+})
+
+pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_PHF1_corr_APOE_CD33.pdf"),
+    width = 10, height = 6)
+p = plot_sccomp_intervals(sccomp_result, title_label = "sccomp: ~ APOEgroup + CD33Group + TREM2Variant * pctPHF1PositiveArea (estimates)")
+if (!is.null(p)) print(p)
+dev.off()
+
+
+### boxplot for significant clusters
+t1 = sccomp_result
+t2 = t1[!is.na(t1$factor),]
+t3 = t2[t2$c_FDR<0.05,]
+
+if (nrow(t3)>0){
+  tryCatch({
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_PHF1_corr_APOE_CD33_orig.pdf"),
+        width = 8, height = 8)
+    sccomp_result |> sccomp_boxplot(factor = "TREM2Variant")
+    dev.off()
+  }, error = function(e) {
+    message("sccomp_boxplot (TREM2*PHF1 corr.) failed: ", conditionMessage(e))
+    try(dev.off(), silent = TRUE)
+  })
+
+  tryCatch({
+    sig_clusters = unique(t3$cluster_name)
+    plot_data = stat_tab[stat_tab$cluster %in% sig_clusters,]
+
+    pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_PHF1_corr_APOE_CD33.pdf"),
+        width = 8, height = 8)
+    p = ggplot(plot_data, aes(x = TREM2Variant, y = fract_sample, fill = TREM2Variant)) +
+      geom_boxplot(outlier.shape = NA) +
+      geom_jitter(width = 0.2, size = 1) +
+      facet_wrap(~cluster, scales = "free_y") +
+      scale_fill_manual(values = pal(unique(plot_data$TREM2Variant))) +
+      labs(y = "Fraction of sample", title = "Significant clusters - abundance by TREM2Variant (PHF1, corr. APOE, CD33)") +
+      theme_light()
+    print(p)
+    dev.off()
+  }, error = function(e) { message("Boxplot by TREM2Variant (PHF1 corr.) failed: ", conditionMessage(e)); try(dev.off(), silent=TRUE) })
 }
 
 
