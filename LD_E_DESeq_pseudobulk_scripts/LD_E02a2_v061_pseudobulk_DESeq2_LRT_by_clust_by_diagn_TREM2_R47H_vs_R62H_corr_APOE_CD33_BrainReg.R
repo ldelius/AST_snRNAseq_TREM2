@@ -22,6 +22,7 @@ library(viridis)
 library(pheatmap)
 library(ggrepel)
 library(WGCNA)
+library(matrixStats)
 
 
 ### define directories and script index
@@ -30,7 +31,7 @@ main_dir = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2/"
 setwd(main_dir)
 
 #specify script/output index as prefix for file names
-script_ind = "LD_E02a2_"
+script_ind = "LD_E02a2_v02_"
 
 #specify output directory
 out_dir = paste0(main_dir,"LD_E_DESeq_pseudobulk/")
@@ -40,7 +41,7 @@ out_dir = paste0(main_dir,"LD_E_DESeq_pseudobulk/")
 ### load dataset; define variables required for DESeq2 models 
 # keep clusters with >= 2 samples per level and at least 2 levels for each categorical variable
 
-bulk_data = qread(file = paste0(out_dir, "LD_E01_bulk_data.qs")) 
+bulk_data = qread(file = paste0(out_dir, "LD_E01_v02_bulk_data.qs")) 
 
 t1 = bulk_data$meta
 names(t1)
@@ -991,73 +992,233 @@ write_csv(t1, file = paste0(out_dir,script_ind, "DEGs_by_cluster_N.csv"))
 
 
 
+###########################################################
+# Bar chart: Number of DEGs per cluster per comparison
+# Split by direction (up/down) and gene category (TF vs other)
+###########################################################
+# For each of the 5 DESeq2 comparisons and each astrocyte cluster:
+#   - bars above zero  = upregulated DEGs  (solid red = TF, light red = other)
+#   - bars below zero  = downregulated DEGs (solid blue = TF, light blue = other)
+# Faceted by comparison so you can see which clusters are most strongly affected
+# and whether regulatory genes (TFs) are disproportionately involved.
+
+message("\n          *** Plotting DEG count bar chart... ", Sys.time(), "\n")
+
+# load cluster order from cluster assignment table (preserves biological ordering)
+clust_tab     = read_csv(paste0(main_dir, "LD_B_AST_analysis_output/LD_B03a_cluster_assignment.csv"))
+cluster_order = clust_tab$cluster_name
+
+# ----- parse bulk_data$DEGs into a tidy table -----
+# DEG list names follow the pattern: {cluster}_{comparison_tag}_{direction}
+# e.g. "AST_SLC1A2_s4_AD_TREM2_R47H_vs_CV_up"
+# We define the 5 comparison tags exactly as they appear in the names.
+
+comp_tags = c(
+  "CV_vs_AST_SLC1A2_s0"      = "Cluster vs ref (CV only)",
+  "TREM2_CV_AD_vs_Control"   = "AD vs Control (CV only)",
+  "AD_TREM2_R62H_vs_CV"      = "R62H vs CV (AD only)",
+  "AD_TREM2_R47H_vs_CV"      = "R47H vs CV (AD only)",
+  "AD_TREM2_R47H_vs_R62H"    = "R47H vs R62H (AD only)"
+)
+
+deg_rows = list()
+
+for (nm in names(bulk_data$DEGs)){
+
+  genes = bulk_data$DEGs[[nm]]
+  if (length(genes) == 0) next
+
+  # identify direction
+  direction = ifelse(grepl("_up$", nm), "up", "down")
+
+  # strip direction suffix to get the comparison key
+  comp_key_raw = sub("_up$|_down$", "", nm)
+
+  # match to one of the 5 comparison tags
+  matched_tag   = NA
+  matched_label = NA
+  for (tag in names(comp_tags)){
+    if (grepl(tag, comp_key_raw, fixed = TRUE)){
+      matched_tag   = tag
+      matched_label = comp_tags[[tag]]
+      break
+    }
+  }
+  if (is.na(matched_tag)) next
+
+  # extract cluster name: everything before the comparison tag
+  cluster = sub(paste0("_", matched_tag, ".*"), "", comp_key_raw)
+  if (!cluster %in% cluster_order) next
+
+  # count TF vs other genes
+  n_TF    = sum(genes %in% GOI$TF)
+  n_other = length(genes) - n_TF
+
+  deg_rows[[length(deg_rows) + 1]] = tibble(
+    cluster    = cluster,
+    comparison = matched_label,
+    direction  = direction,
+    n_TF       = n_TF,
+    n_other    = n_other
+  )
+}
+
+deg_tab = bind_rows(deg_rows)
+
+# pivot to long format (one row per cluster x comparison x direction x gene_cat)
+deg_long = deg_tab %>%
+  pivot_longer(cols = c(n_TF, n_other),
+               names_to  = "gene_cat",
+               values_to = "n_genes") %>%
+  mutate(
+    # downregulated bars go below zero
+    n_plot     = ifelse(direction == "up", n_genes, -n_genes),
+    cluster    = factor(cluster,    levels = cluster_order),
+    comparison = factor(comparison, levels = unname(comp_tags)),
+    gene_cat   = factor(gene_cat,   levels = c("n_TF", "n_other")),
+    fill_group = factor(paste0(direction, "_", gene_cat),
+                        levels = c("up_n_TF", "up_n_other", "down_n_TF", "down_n_other"))
+  )
+
+# colour scheme: TF = solid, other = lighter; up = red/salmon, down = blue/lightblue
+fill_colors = c(
+  "up_n_TF"      = "#C0392B",   # dark red    — TF upregulated
+  "up_n_other"   = "#F1948A",   # light red   — other upregulated
+  "down_n_TF"    = "#1A5276",   # dark blue   — TF downregulated
+  "down_n_other" = "#85C1E9"    # light blue  — other downregulated
+)
+
+fill_labels = c(
+  "up_n_TF"      = "Up (TF)",
+  "up_n_other"   = "Up (other)",
+  "down_n_TF"    = "Down (TF)",
+  "down_n_other" = "Down (other)"
+)
+
+p_deg_bars = ggplot(deg_long,
+                    aes(x = cluster, y = n_plot, fill = fill_group)) +
+  geom_col(position = "stack", width = 0.75) +
+  geom_hline(yintercept = 0, linewidth = 0.4, color = "grey20") +
+  scale_fill_manual(values = fill_colors, labels = fill_labels, name = NULL) +
+  scale_y_continuous(
+    labels = function(x) abs(x),
+    name   = "No. of DEGs (padj < 0.1)"
+  ) +
+  scale_x_discrete(name = NULL) +
+  facet_wrap(~ comparison, ncol = 1, scales = "free_y") +
+  theme_classic(base_size = 11) +
+  theme(
+    axis.text.x      = element_text(angle = 45, hjust = 1, size = 9),
+    strip.background = element_rect(fill = "grey92", color = NA),
+    strip.text       = element_text(face = "bold", size = 10),
+    legend.position  = "top",
+    panel.grid.major.y = element_line(color = "grey90", linewidth = 0.3)
+  ) +
+  labs(title = "DEGs per cluster and comparison",
+       caption = "Bars above zero = upregulated; bars below zero = downregulated.\nSolid = transcription factors (Fantom5); lighter = all other genes.")
+
+pdf(file   = paste0(out_dir, script_ind, "DEG_counts_per_cluster_by_comparison.pdf"),
+    width  = max(10, length(cluster_order) * 0.55 + 3),
+    height = 18)
+plot(p_deg_bars)
+dev.off()
+
+message("    Saved: ", out_dir, script_ind, "DEG_counts_per_cluster_by_comparison.pdf")
+
+
 #################################################
 # plot heatmap top3000 variable genes by cluster_sample
 #################################################
+# cellwidth and fontsize increased for readable legends/annotation bars;
+# PDF width calculated dynamically so the plot is never cut off.
+
+message("\n          *** Plotting top-3000 variable genes heatmap... ", Sys.time(), "\n")
 
 vst_mat = bulk_data$vst_mat
 
 #identify top 3000 variable genes
-v1 = rowVars(vst_mat)
+v1       = rowVars(vst_mat)
 pl_genes = names(v1[order(-v1)][1:3000])
 
-pl_mat_X = bulk_data$gene_Z_scores$clusters_combined[pl_genes,]
-lims_X = 0.3*c(-max(abs(pl_mat_X)), max(abs(pl_mat_X)))
+pl_mat_X  = bulk_data$gene_Z_scores$clusters_combined[pl_genes,]
+lims_X    = 0.3 * c(-max(abs(pl_mat_X)), max(abs(pl_mat_X)))
 
-names(meta)
+# shared cellwidth for dynamic PDF width calculation
+cellwidth_val = 5
 
-pdf(file = paste0(out_dir,script_ind, "Gene_expr_heatmap_var_genes_top3000.pdf"), 
-    width = 15, height = 30)
-{
-  p1 = bulkdata_heatmap(pl_mat = pl_mat_X, 
-                        pl_meta = meta,
-                        pl_genes = pl_genes,
-                        x_col = "cluster_sample", 
-                        meta_annot_cols = c("TREM2Variant","NeuropathologicalDiagnosis",
-                                            "CD33Group","APOEgroup", "cohort",
-                                            "cluster_name"),
-                        show_rownames = FALSE, show_colnames = FALSE,
-                        cluster_rows = TRUE, cluster_cols = FALSE,
-                        color = viridis(250),
-                        lims = lims_X,  cellwidth = 2, cellheight = 0.2, 
-                        fontsize = 5, title = paste0("Top3000 variable genes - Z-score"))
-  
-}
+# Dynamic width: n_cols * cellwidth (pt) / 72 (pt/inch) + buffer for legend + annotation bars
+n_cols      = ncol(pl_mat_X)
+pdf_width_X = ceiling(n_cols * cellwidth_val / 72) + 6   # +6 inches: legend + dendrogram + margins
+
+pdf(file   = paste0(out_dir, script_ind, "Gene_expr_heatmap_var_genes_top3000.pdf"),
+    width  = pdf_width_X, height = 25)
+
+bulkdata_heatmap(
+  pl_mat          = pl_mat_X,
+  pl_meta         = meta,
+  pl_genes        = pl_genes,
+  x_col           = "cluster_sample",
+  meta_annot_cols = c("TREM2Variant", "NeuropathologicalDiagnosis",
+                      "CD33Group", "APOEgroup", "cohort", "cluster_name"),
+  show_rownames   = FALSE,
+  show_colnames   = FALSE,
+  cluster_rows    = TRUE, cluster_cols = FALSE,
+  color           = viridis(250),
+  lims            = lims_X,
+  cellwidth       = cellwidth_val,
+  cellheight      = 0.5,
+  fontsize        = 10,
+  title           = "Top 3000 variable genes - Z-score (corrected VST)"
+)
+
 dev.off()
 
+message("    Saved: ", out_dir, script_ind, "Gene_expr_heatmap_var_genes_top3000.pdf")
 
 
 #################################################
 # plot heatmap DEGs combined by cluster_sample
 #################################################
+# Shows all genes significant (padj < 0.1) in any DESeq2 comparison.
+# cluster_rows = FALSE to avoid multi-hour clustering at sub-pixel row height;
+# cellheight = NA lets pheatmap auto-scale rows to fill the PDF height.
 
-vst_mat = bulk_data$vst_mat
+message("\n          *** Plotting DEGs combined heatmap (all DEGs)... ", Sys.time(), "\n")
 
-pl_genes = unique(unlist(bulk_data$DEGs))
+pl_genes_DEG = unique(unlist(bulk_data$DEGs))
+n_DEGs       = length(pl_genes_DEG)
 
-pl_mat_X = bulk_data$gene_Z_scores$clusters_combined[pl_genes,]
-lims_X = 0.3*c(-max(abs(pl_mat_X)), max(abs(pl_mat_X)))
+message("    Total DEGs across all comparisons: ", n_DEGs)
 
-names(meta)
+pl_mat_DEG    = bulk_data$gene_Z_scores$clusters_combined[pl_genes_DEG, ]
+lims_DEG      = 0.3 * c(-max(abs(pl_mat_DEG), na.rm = TRUE), max(abs(pl_mat_DEG), na.rm = TRUE))
+pdf_width_DEG = ceiling(ncol(pl_mat_DEG) * cellwidth_val / 72) + 6
 
-pdf(file = paste0(out_dir,script_ind, "Gene_expr_heatmap_DEGs_comb.pdf"), 
-    width = 15, height = 30)
-{
-  p1 = bulkdata_heatmap(pl_mat = pl_mat_X, 
-                        pl_meta = meta,
-                        pl_genes = pl_genes,
-                        x_col = "cluster_sample", 
-                        meta_annot_cols = c("TREM2Variant","NeuropathologicalDiagnosis",
-                                            "CD33Group","APOEgroup", "cohort",
-                                            "cluster_name"),
-                        show_rownames = FALSE, show_colnames = FALSE,
-                        cluster_rows = TRUE, cluster_cols = FALSE,
-                        color = viridis(250),
-                        lims = lims_X,  cellwidth = 2, cellheight = 2, 
-                        fontsize = 5, title = paste0("Combined DEGs - Z-score"))
-  
-}
+pdf(file   = paste0(out_dir, script_ind, "Gene_expr_heatmap_DEGs_comb.pdf"),
+    width  = pdf_width_DEG, height = 40)
+
+bulkdata_heatmap(
+  pl_mat          = pl_mat_DEG,
+  pl_meta         = meta,
+  pl_genes        = pl_genes_DEG,
+  x_col           = "cluster_sample",
+  meta_annot_cols = c("TREM2Variant", "NeuropathologicalDiagnosis",
+                      "CD33Group", "APOEgroup", "cohort", "cluster_name"),
+  show_rownames   = FALSE,
+  show_colnames   = FALSE,
+  cluster_rows    = FALSE,   # large gene sets — clustering not useful at sub-pixel row height
+  cluster_cols    = FALSE,
+  color           = viridis(250),
+  lims            = lims_DEG,
+  cellwidth       = cellwidth_val,
+  cellheight      = NA,      # auto-scale: pheatmap fills the PDF height
+  fontsize        = 10,
+  title           = paste0("All DEGs combined (n=", n_DEGs, ") - Z-score (corrected VST)")
+)
+
 dev.off()
+
+message("    Saved: ", out_dir, script_ind, "Gene_expr_heatmap_DEGs_comb.pdf")
 
 
 
