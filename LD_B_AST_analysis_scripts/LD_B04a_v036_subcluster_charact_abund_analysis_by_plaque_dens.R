@@ -72,10 +72,10 @@ t1 = read_csv(paste0(main_dir,"data_TREM2_michael/A_input/Green24_S2_subpopulati
 
 for (cl in unique(t1$state)){
   t2 = t1[t1$state == cl & t1$avg_log2FC>log2(1.2) & t1$p_val_adj<0.05,]
-  subtype_markers$Mancuso24[[cl]] = t2$gene
+  subtype_markers$Green24[[cl]] = t2$gene
 }
 
-lengths(subtype_markers$Mancuso24)
+lengths(subtype_markers$Green24)
 
 
 t1 = read_csv(paste0(main_dir,"data_TREM2_michael/A_input/Gazestani23_TableS2_MIC_markers.csv"))
@@ -333,7 +333,7 @@ for(subtype_dataset in names(subtype_markers)){
 }
 
 
-p1 = DotPlot(seur, features = colnames(seur@meta.data)[grepl("Mancuso", colnames(seur@meta.data))], 
+p1 = DotPlot(seur, features = colnames(seur@meta.data)[grepl("Green24", colnames(seur@meta.data))],
              group.by = "cluster_name", scale.by = "size") + RotatedAxis()+
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))+
   scale_y_discrete(limits = cluster_names)
@@ -343,7 +343,7 @@ p2 = DotPlot(seur, features = colnames(seur@meta.data)[grepl("Gazestani", colnam
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))+
   scale_y_discrete(limits = cluster_names)
 
-pdf(file = paste0(out_dir,script_ind, "Cell_markers_module_score_dotplot_Mancuso24.pdf"),
+pdf(file = paste0(out_dir,script_ind, "Cell_markers_module_score_dotplot_Green24.pdf"),
     width = 6, height = 8)
 plot(p1)
 dev.off()
@@ -353,30 +353,30 @@ pdf(file = paste0(out_dir,script_ind, "Cell_markers_module_score_dotplot_Gazesta
 plot(p2)
 dev.off()
 
-# Mancuso24: size-adjusted wide overview
-mancuso_cols = colnames(seur@meta.data)[grepl("Mancuso24", colnames(seur@meta.data))]
+# Green24: size-adjusted wide overview
+green24_cols = colnames(seur@meta.data)[grepl("Green24", colnames(seur@meta.data))]
 
-p_mancuso_adj = DotPlot(seur, features = mancuso_cols,
+p_green24_adj = DotPlot(seur, features = green24_cols,
                         group.by = "cluster_name", scale.by = "size") + RotatedAxis() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 6)) +
   scale_y_discrete(limits = cluster_names)
 
-pdf(file = paste0(out_dir, script_ind, "Cell_markers_module_score_dotplot_Mancuso24_size_adj.pdf"),
+pdf(file = paste0(out_dir, script_ind, "Cell_markers_module_score_dotplot_Green24_size_adj.pdf"),
     width = 25, height = 6)
-plot(p_mancuso_adj)
+plot(p_green24_adj)
 dev.off()
 
-# Mancuso24: astrocyte subtypes only
-mancuso_ast_cols = mancuso_cols[grepl("Mancuso24_Ast", mancuso_cols)]
+# Green24: astrocyte subtypes only
+green24_ast_cols = green24_cols[grepl("Green24_Ast", green24_cols)]
 
-p_mancuso_ast = DotPlot(seur, features = mancuso_ast_cols,
+p_green24_ast = DotPlot(seur, features = green24_ast_cols,
                         group.by = "cluster_name", scale.by = "size") + RotatedAxis() +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 8)) +
   scale_y_discrete(limits = cluster_names)
 
-pdf(file = paste0(out_dir, script_ind, "Cell_markers_module_score_dotplot_Mancuso24_AST_only.pdf"),
+pdf(file = paste0(out_dir, script_ind, "Cell_markers_module_score_dotplot_Green24_AST_only.pdf"),
     width = 8, height = 6)
-plot(p_mancuso_ast)
+plot(p_green24_ast)
 dev.off()
 
 
