@@ -30,14 +30,14 @@ main_dir = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2/"
 setwd(main_dir)
 
 #specify script/output index as prefix for file names
-script_ind = "LD_E03a2_"
+script_ind = "LD_E03a2_v02_"
 
 #specify output directory
 out_dir = paste0(main_dir, "LD_E_DESeq_pseudobulk/")
 
 
 # load astrocyte DESeq2 dataset
-bulk_data = qread(file = paste0(out_dir, "LD_E02a2_bulk_data.qs"))
+bulk_data = qread(file = paste0(out_dir, "LD_E02a2_v02_bulk_data.qs"))
 
 
 ### define clusters and reference cluster
