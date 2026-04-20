@@ -16,7 +16,7 @@ main_dir = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2/"
 setwd(main_dir)
 
 #specify script/output index as prefix for file names
-script_ind = "LD_F01_"
+script_ind = "LD_F01_v02_"
 
 #specify output directory
 out_dir = paste0(main_dir,"LD_F_DESeq_pseudobulk_WGCNA/")
@@ -25,14 +25,14 @@ if (!dir.exists(out_dir)){dir.create(out_dir, recursive = TRUE)}
 
 #load group and sample info
 
-gr_tab = read_csv("LD_B_AST_analysis_output/LD_B04a_gr_tab_updated.csv")
+gr_tab = read_csv("LD_B_AST_analysis_output/LD_B04a_v02_gr_tab_updated.csv")
 
 
 #load dataset and cluster info
 
 clust_tab = read_csv("LD_B_AST_analysis_output/LD_B03a_cluster_assignment.csv")
 
-seur = qread(file = "LD_B_AST_analysis_output/LD_B04a_seur.qs") 
+seur = qread(file = "LD_B_AST_analysis_output/LD_B04a_v02_seur.qs") 
 
 
 #define minimal cluster size for pseudobulking
