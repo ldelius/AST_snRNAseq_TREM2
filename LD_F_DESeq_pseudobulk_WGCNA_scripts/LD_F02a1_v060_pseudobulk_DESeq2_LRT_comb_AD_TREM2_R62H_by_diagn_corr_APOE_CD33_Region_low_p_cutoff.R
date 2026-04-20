@@ -34,16 +34,16 @@ setwd(main_dir)
 out_dir = paste0(main_dir,"LD_F_DESeq_pseudobulk_WGCNA/")
 
 #specify script/output index as prefix for file names
-script_ind = "LD_F02a1_"
+script_ind = "LD_F02a1_v02_"
 
 
 ### load dataset; remove Control samples
 
-bulk_data = qread(file = paste0(out_dir, "LD_F01_bulk_data.qs"))
+bulk_data = qread(file = paste0(out_dir, "LD_F01_v02_bulk_data.qs"))
 
 t1 = bulk_data$gr_tab
 
-#remove Control samples
+#remove Control samples - this script works with both risk variants combined!!
 t1 = t1[t1$NeuropathologicalDiagnosis != "Control" &
           !is.na(t1$CD33Group) & !is.na(t1$APOEgroup) & !is.na(t1$BrainRegion),]
 
@@ -494,7 +494,7 @@ dev.off()
 sessionInfo()
 
 message("\n\n##########################################################################\n",
-        "# Completed C01 ", Sys.time(),
+        "# Completed F02 ", Sys.time(),
         "\n##########################################################################\n",
         "\n##########################################################################\n\n\n")
 
