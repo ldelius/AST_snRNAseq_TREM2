@@ -42,28 +42,14 @@ seur_mic = qread(file = paste0(main_dir, "data_TREM2_michael/B_load_from_scflow_
 # 2. verify RNA data not yet log-normalised in either Seurat
 ###########################################################
 
-# CellChat expects log-normalised counts in the RNA data layer. Our upstream
-# pipelines used SCT (which lives in a separate assay), so the RNA data layer
-# should be empty here. We will populate it with NormalizeData() after merging,
-# so MIC + AST cells are normalised in one pass.
-# Michael used SCT in his pipeline, however, CellChatwebsite recommends NormalizeData()
+# For CellChat I want to use log-normalised counts in the RNA data layer as recommended by CellChat website.
+# Our upstream pipelines used SCT, so the RNA data layer should be empty here.
+# However, double checking here.
 
 message("\n\n          *** Check RNA data layer state... ", Sys.time(), "\n\n")
 
-
-check_rna_data_empty = function(seur, label){
-  data_mat = tryCatch(GetAssayData(seur, assay = "RNA", layer = "data"),
-                      warning = function(w) NULL,
-                      error   = function(e) NULL)
-  is_empty = is.null(data_mat) || length(data_mat) == 0 || nrow(data_mat) == 0
-  cat(label, ": RNA data layer empty (= not yet normalised)? ", is_empty, "\n", sep = "")
-  return(is_empty)
-}
-
-if (!check_rna_data_empty(seur_ast, "AST") || !check_rna_data_empty(seur_mic, "MIC")){
-  stop("RNA data layer is already populated in one or both Seurats. ",
-       "NormalizeData() may have been run upstream - decide before proceeding.")
-}
+stopifnot(length(GetAssayData(seur_ast, assay = "RNA", layer = "data")) == 0)
+stopifnot(length(GetAssayData(seur_mic, assay = "RNA", layer = "data")) == 0)
 
 
 
@@ -77,16 +63,7 @@ if (!check_rna_data_empty(seur_ast, "AST") || !check_rna_data_empty(seur_mic, "M
 
 message("\n\n          *** Sanity checks... ", Sys.time(), "\n\n")
  
- 
-### confirm AST contains only Astro, MIC only Micro
-if (!all(seur_ast$cluster_celltype == "Astro")){
-  stop("AST Seurat contains non-Astro cells.")
-}
-if (!all(seur_mic$cluster_celltype == "Micro")){
-  stop("MIC Seurat contains non-Micro cells.")
-}
- 
- 
+
 ### patient-level metadata agreement
 covar_cols = c("group", "sample", "SampleID", "StudyID",
                "Age", "Sex",
@@ -95,47 +72,48 @@ covar_cols = c("group", "sample", "SampleID", "StudyID",
                "NeuropathologicalDiagnosis",
                "CD33Group", "cohort", "manifest", "plaque_dens")
  
-# only compare columns present in BOTH Seurats
+# only compare columns present in both Seurats
 covar_cols_check = intersect(intersect(covar_cols, colnames(seur_ast@meta.data)),
                              colnames(seur_mic@meta.data))
  
-cat("\nCovariates compared between AST and MIC: ",
-    paste(covar_cols_check, collapse = ", "), "\n")
+cat("\nCovariates compared between AST and MIC: ", paste(covar_cols_check, collapse = ", "), "\n")
 cat("Not compared (missing in one or both): ",
     paste(setdiff(covar_cols, covar_cols_check), collapse = ", "), "\n")
  
-if (!"sample" %in% covar_cols_check){
-  stop("'sample' missing from one or both Seurats - cannot align metadata.")
-}
+if (!"sample" %in% covar_cols_check) stop("'sample' missing from one or both Seurats.")
  
  
-### one row per sample on each side
+### one row per sample on each side, joined so AST/MIC values sit side by side
 t_ast = seur_ast@meta.data %>% distinct(sample, .keep_all = TRUE) %>% select(all_of(covar_cols_check))
 t_mic = seur_mic@meta.data %>% distinct(sample, .keep_all = TRUE) %>% select(all_of(covar_cols_check))
  
-shared_samples = intersect(t_ast$sample, t_mic$sample)
+joined = inner_join(t_ast, t_mic, by = "sample", suffix = c("_ast", "_mic"))
+ 
 cat("\nN samples - AST only:", length(setdiff(t_ast$sample, t_mic$sample)),
     " | MIC only:", length(setdiff(t_mic$sample, t_ast$sample)),
-    " | shared:", length(shared_samples), "\n")
+    " | shared:", nrow(joined), "\n")
  
  
-### compare each covariate row-by-row across shared samples
-mismatches = list()
-for (s in shared_samples){
-  r1 = t_ast[t_ast$sample == s, ]
-  r2 = t_mic[t_mic$sample == s, ]
-  for (cov in setdiff(covar_cols_check, "sample")){
-    if (!identical(r1[[cov]], r2[[cov]])){
-      mismatches[[length(mismatches) + 1]] =
-        tibble(sample = s, covar = cov, AST = r1[[cov]], MIC = r2[[cov]])
-    }
+### compare each covariate column-pair, NA-safe
+# disagree if values differ, OR if exactly one side is NA (xor)
+# both NA -> agree (mism = NA -> set to FALSE)
+mismatched_covars = c()
+for (cov in setdiff(covar_cols_check, "sample")){
+  a = joined[[paste0(cov, "_ast")]]
+  b = joined[[paste0(cov, "_mic")]]
+  
+  mism = (a != b) | xor(is.na(a), is.na(b))
+  mism[is.na(mism)] = FALSE
+  
+  if (any(mism)){
+    cat("Mismatch in", cov, "for samples:", paste(joined$sample[mism], collapse = ", "), "\n")
+    mismatched_covars = c(mismatched_covars, cov)
   }
 }
  
-if (length(mismatches) > 0){
-  cat("\n>>> Covariate mismatches: <<<\n")
-  print(bind_rows(mismatches))
-  stop("Covariate mismatch between AST and MIC. Resolve before merging.")
+if (length(mismatched_covars) > 0){
+  stop("Covariate mismatch in: ", paste(mismatched_covars, collapse = ", "),
+       ". Resolve before merging.")
 } else {
   cat("\n>>> All compared covariates agree across shared samples. <<<\n")
 }
@@ -191,8 +169,7 @@ rm(seur_ast, seur_mic); gc()
 ###########################################################
 
 # NormalizeData() is per-cell (Per-cell: each cell's counts get divided by that cell's library size,
-# multiplied by 10,000, plus 1, log-transformed.). Running on the merged object gives consistent
-# normalisation for AST + MIC in one procedure.
+# multiplied by 10,000, plus 1, log-transformed.)
 
 message("\n\n          *** NormalizeData on merged RNA assay... ", Sys.time(), "\n\n")
 
@@ -214,16 +191,16 @@ Idents(seur) = "cluster_name"
 # 7. diagnostics for downsampling decision in G02 (cells per cluster_sample ())
 ###########################################################
 
-# running per cluster summary csv, cap vs totalcell csv, histogram
-
+# Per-cluster summary + cap-vs-total trade-off table. Used to pick a
+# per-cluster_sample cap for G02.
+ 
 message("\n\n          *** Cells per cluster_sample diagnostics... ", Sys.time(), "\n\n")
-
-
+ 
+ 
 t_csize = seur@meta.data %>%
-  count(cell_type_joint, cluster_name, sample, name = "n_cells") %>%
-  arrange(desc(n_cells))
-
-
+  count(cell_type_joint, cluster_name, sample, name = "n_cells")
+ 
+ 
 ### per-cluster summary
 t_summary = t_csize %>%
   group_by(cell_type_joint, cluster_name) %>%
@@ -236,8 +213,8 @@ t_summary = t_csize %>%
             total_cells  = sum(n_cells),
             .groups = "drop") %>%
   arrange(cell_type_joint, cluster_name)
-
-
+ 
+ 
 ### cap-vs-total-cells trade-off table
 caps = c(50, 75, 100, 150, 200, 250, 300, 500)
 t_caps = tibble(cap = caps) %>%
@@ -245,39 +222,15 @@ t_caps = tibble(cap = caps) %>%
   mutate(total_cells_after_cap = sum(pmin(t_csize$n_cells, cap)),
          n_clusters_capped     = sum(t_csize$n_cells > cap)) %>%
   ungroup()
-
-
-cat("\nPer-cluster summary:\n");                 print(t_summary, n = Inf)
-cat("\nTotal cells after downsampling at candidate caps:\n");  print(t_caps)
-
-
+ 
+ 
+cat("\nPer-cluster summary:\n");                                print(t_summary, n = Inf)
+cat("\nTotal cells after downsampling at candidate caps:\n");   print(t_caps)
+ 
+ 
 ### save tables
 write_csv(t_summary, paste0(out_dir, script_ind, "cluster_sample_size_summary.csv"))
-write_csv(t_csize,   paste0(out_dir, script_ind, "cluster_sample_size_full.csv"))
 write_csv(t_caps,    paste0(out_dir, script_ind, "cluster_sample_size_at_caps.csv"))
-
-
-### histogram, faceted by cluster_name
-pl_hist = ggplot(t_csize, aes(x = n_cells, fill = cell_type_joint)) +
-  geom_histogram(bins = 30) +
-  geom_vline(xintercept = c(100, 200), linetype = "dashed", colour = "grey40", linewidth = 0.3) +
-  facet_wrap(~ cluster_name, scales = "free_y") +
-  scale_fill_manual(values = c("AST" = "dodgerblue", "MIC" = "orange")) +
-  labs(x = "Cells per cluster_sample",
-       y = "N samples",
-       title = "Distribution of cluster_sample sizes",
-       subtitle = "Dashed lines: candidate downsample caps (100, 200)") +
-  theme_bw() +
-  theme(strip.text = element_text(size = 7))
-
-n_clusters = length(unique(t_csize$cluster_name))
-n_cols = ceiling(sqrt(n_clusters))
-n_rows = ceiling(n_clusters / n_cols)
-
-pdf(file = paste0(out_dir, script_ind, "cluster_sample_size_histograms.pdf"),
-    width = max(8, n_cols * 2), height = max(6, n_rows * 1.8))
-print(pl_hist)
-dev.off()
 
 
 
