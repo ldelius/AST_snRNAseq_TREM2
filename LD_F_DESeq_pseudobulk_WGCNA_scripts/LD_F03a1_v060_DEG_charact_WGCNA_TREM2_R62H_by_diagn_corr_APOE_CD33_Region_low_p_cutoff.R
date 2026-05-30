@@ -27,14 +27,16 @@ main_dir = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2/"
 setwd(main_dir)
 
 #specify output directory
-out_dir = paste0(main_dir,"LD_F_DESeq_pseudobulk_WGCNA/")
+in_dir  = paste0(main_dir,"LD_F_DESeq_pseudobulk_WGCNA/")
+out_dir = paste0(main_dir,"LD_F_DESeq_pseudobulk_WGCNA/LD_F03a1_v03/")
+dir.create(out_dir, showWarnings = FALSE)
 
 #specify script/output index as prefix for file names
-script_ind = "LD_F03a1_v02_"
+script_ind = "LD_F03a1_v04_"
 
 
 ### load DEseq2 dataset
-bulk_data = qread(file = paste0(out_dir,"LD_F02a1_v02_bulk_data.rda")) 
+bulk_data = qread(file = paste0(in_dir,"LD_F02a1_v03_bulk_data.rda"))
 
 
 
@@ -468,10 +470,17 @@ dev.off()
 
 
 ######################################################################
-### Module-trait correlation matrix (WGCNA approach)
+### Exploratory module-trait correlation screen (WGCNA approach)
+###
+### NOTE: samples here are cluster_sample pseudobulks pooled across
+### clusters. A module that is simply "high in one cluster" will
+### correlate with any trait that is unevenly distributed across
+### clusters, so correlations reflect both biology of interest and
+### cluster-identity confounding. Treat as an exploratory screen,
+### not a confirmatory test.
 ######################################################################
 
-message("\n\n   *Compute module-trait correlation matrix \n")
+message("\n\n   *Compute exploratory module-trait correlation screen \n")
 
 # --- Build trait table aligned to eigengene columns ---
 
@@ -489,9 +498,15 @@ numeric_traits = c("plaque_dens", "pct4G8PositiveArea", "pctAT8PositiveArea",
 trait_df = meta_mt[, numeric_traits, drop = FALSE]
 
 # Categorical traits as binary dummies
-# TREM2Variant: CV is reference; one dummy per non-reference level
+# TREM2Variant: CV is reference; one dummy per non-reference level.
+# Each risk-variant dummy compares that variant vs CV only — samples
+# carrying *other* non-CV variants are set to NA so they are dropped
+# from the per-trait correlation (pairwise complete cases).
 for (lv in setdiff(levels(meta_mt$TREM2Variant), "CV")) {
-  trait_df[[paste0("TREM2_", lv)]] = as.integer(meta_mt$TREM2Variant == lv)
+  dummy = rep(NA_integer_, nrow(meta_mt))
+  dummy[meta_mt$TREM2Variant == "CV"] = 0L
+  dummy[meta_mt$TREM2Variant == lv]   = 1L
+  trait_df[[paste0("TREM2_", lv)]] = dummy
 }
 
 # APOEgroup: APOE4-pos vs APOE4-neg
@@ -572,11 +587,12 @@ make_cor_col = function(mat) {
   colorRamp2(c(-mx, 0, mx), c("blue", "white", "red"))
 }
 
-# significance overlay: ** = BH-FDR < 0.05, * = nominal p < 0.05
+# significance overlay (BH-FDR only): * < 0.05, ** < 0.01, *** < 0.001
 sig_label = function(p_raw, p_adj) {
-  ifelse(is.na(p_raw), "",
-    ifelse(p_adj < 0.05, "**",
-      ifelse(p_raw < 0.05, "*", "")))
+  ifelse(is.na(p_adj), "",
+    ifelse(p_adj < 0.001, "***",
+      ifelse(p_adj < 0.01, "**",
+        ifelse(p_adj < 0.05, "*", ""))))
 }
 
 cell_labels = matrix(sig_label(as.vector(pval_mat), as.vector(padj_mat)),
@@ -595,13 +611,14 @@ ht_cor_full = Heatmap(
   cluster_rows      = FALSE,
   cluster_columns   = FALSE,
   row_title         = "Modules",
-  column_title      = "Traits",
+  column_title      = "Exploratory module-trait screen  (BH-FDR: * <0.05, ** <0.01, *** <0.001)",
   show_row_names    = TRUE,
   show_column_names = TRUE,
   na_col            = "grey90",
   column_names_rot  = 45,
-  column_names_gp   = gpar(fontsize = 9),
-  row_names_gp      = gpar(fontsize = 9)
+  column_names_gp   = gpar(fontsize = 11),
+  row_names_gp      = gpar(fontsize = 11),
+  column_title_gp   = gpar(fontsize = 10, fontface = "plain")
 )
 
 pdf(file  = paste0(out_dir, script_ind, "Module_trait_correlation_heatmap.pdf"),
@@ -610,9 +627,9 @@ pdf(file  = paste0(out_dir, script_ind, "Module_trait_correlation_heatmap.pdf"),
 { draw(ht_cor_full, heatmap_legend_side = "right") }
 dev.off()
 
-# --- Filtered heatmap: traits with at least one nominally significant module ---
+# --- Filtered heatmap: traits with at least one BH-FDR significant module ---
 
-sig_traits = trait_names[apply(pval_mat, 2, function(p) any(p < 0.05, na.rm = TRUE))]
+sig_traits = trait_names[apply(padj_mat, 2, function(p) any(p < 0.05, na.rm = TRUE))]
 
 if (length(sig_traits) >= 2) {
 
@@ -629,13 +646,14 @@ if (length(sig_traits) >= 2) {
     cluster_rows      = FALSE,
     cluster_columns   = FALSE,
     row_title         = "Modules",
-    column_title      = "Significant traits (nominal p<0.05)",
+    column_title      = "Significant traits  (BH-FDR: * <0.05, ** <0.01, *** <0.001)",
     show_row_names    = TRUE,
     show_column_names = TRUE,
     na_col            = "grey90",
     column_names_rot  = 45,
-    column_names_gp   = gpar(fontsize = 9),
-    row_names_gp      = gpar(fontsize = 9)
+    column_names_gp   = gpar(fontsize = 11),
+    row_names_gp      = gpar(fontsize = 11),
+    column_title_gp   = gpar(fontsize = 10, fontface = "plain")
   )
 
   pdf(file  = paste0(out_dir, script_ind, "Module_trait_correlation_heatmap_sig_traits.pdf"),
@@ -645,8 +663,137 @@ if (length(sig_traits) >= 2) {
   dev.off()
 
 } else {
-  message("   *Fewer than 2 nominally significant traits found; skipping filtered heatmap")
+  message("   *Fewer than 2 BH-FDR significant traits found; skipping filtered heatmap")
 }
+
+
+######################################################################
+### Per-cluster multivariable LM block — commented out (2026-04-21)
+### Supervisor not interested; keeping for future reference.
+######################################################################
+# message("\n\n   *Fit per-cluster multivariable LM per module (omnibus F-tests) \n")
+#
+# me_mat_lm = bulk_data$wgcna$mod_eigengene_mat
+# meta_lm   = bulk_data$meta
+# meta_lm   = meta_lm[match(colnames(me_mat_lm), meta_lm$cluster_sample), ]
+#
+# lm_formula_rhs = "TREM2Variant + cohort + BrainRegion + APOEgroup + CD33Group"
+# lm_terms_keep  = c("TREM2Variant", "cohort", "BrainRegion", "APOEgroup", "CD33Group")
+#
+# mod_names_lm     = rownames(me_mat_lm)
+# cluster_names_lm = as.character(unique(meta_lm$cluster_name))
+#
+# lm_res = list()
+#
+# for (cl in cluster_names_lm) {
+#   idx = which(meta_lm$cluster_name == cl)
+#   if (length(idx) < 10) {
+#     message("   *Skipping cluster ", cl, " (n=", length(idx), " < 10)")
+#     next
+#   }
+#
+#   meta_cl = droplevels(meta_lm[idx, ])
+#
+#   for (mod1 in mod_names_lm) {
+#     y = me_mat_lm[mod1, idx]
+#     df_fit = data.frame(eigengene = y, meta_cl, check.names = FALSE)
+#
+#     fit = try(lm(as.formula(paste("eigengene ~", lm_formula_rhs)), data = df_fit),
+#               silent = TRUE)
+#     if (inherits(fit, "try-error")) next
+#
+#     # omnibus per-term F-tests (Type-II-like, partial F for each predictor)
+#     a = try(drop1(fit, test = "F"), silent = TRUE)
+#     if (inherits(a, "try-error")) next
+#     a = a[rownames(a) != "<none>", , drop = FALSE]
+#     if (nrow(a) == 0) next
+#
+#     rss_full = sum(residuals(fit)^2)
+#     ss_eff   = a[, "Sum of Sq"]
+#
+#     lm_res[[length(lm_res) + 1]] = data.frame(
+#       cluster      = cl,
+#       module       = mod1,
+#       predictor    = rownames(a),
+#       df_num       = a[, "Df"],
+#       df_den       = fit$df.residual,
+#       ss_effect    = ss_eff,
+#       F_stat       = a[, "F value"],
+#       pvalue       = a[, "Pr(>F)"],
+#       partial_eta2 = ss_eff / (ss_eff + rss_full),
+#       n            = nrow(df_fit),
+#       stringsAsFactors = FALSE
+#     )
+#   }
+# }
+#
+# lm_long = do.call(rbind, lm_res)
+#
+# # BH FDR across all (cluster x module x predictor) tests
+# lm_long$padj = p.adjust(lm_long$pvalue, method = "BH")
+#
+# write_csv(lm_long,
+#           file = paste0(out_dir, script_ind, "Module_trait_lm_results.csv"))
+#
+# lm_long$sig_label = ifelse(is.na(lm_long$pvalue), "",
+#                     ifelse(lm_long$padj   < 0.05, "**",
+#                     ifelse(lm_long$pvalue < 0.05, "*", "")))
+#
+# predictor_order = lm_terms_keep
+#
+# ht_list_lm = list()
+#
+# for (cl in unique(lm_long$cluster)) {
+#   d_cl = lm_long[lm_long$cluster == cl, ]
+#   eta_mat = matrix(NA_real_, nrow = length(mod_names_lm), ncol = length(predictor_order),
+#                    dimnames = list(mod_names_lm, predictor_order))
+#   lbl_mat = matrix("",       nrow = length(mod_names_lm), ncol = length(predictor_order),
+#                    dimnames = list(mod_names_lm, predictor_order))
+#   for (i in seq_len(nrow(d_cl))) {
+#     if (d_cl$predictor[i] %in% predictor_order) {
+#       eta_mat[d_cl$module[i], d_cl$predictor[i]] = d_cl$partial_eta2[i]
+#       lbl_mat[d_cl$module[i], d_cl$predictor[i]] = d_cl$sig_label[i]
+#     }
+#   }
+#
+#   mx = max(eta_mat, na.rm = TRUE)
+#   if (!is.finite(mx) || mx == 0) mx = 1
+#   col_fun = colorRamp2(c(0, mx), c("white", "red"))
+#
+#   ht_list_lm[[cl]] = Heatmap(
+#     eta_mat,
+#     name              = "partial eta^2",
+#     col               = col_fun,
+#     cell_fun          = function(j, i, x, y, width, height, fill) {
+#       grid.text(lbl_mat[i, j], x, y, gp = gpar(fontsize = 8))
+#     },
+#     cluster_rows      = FALSE,
+#     cluster_columns   = FALSE,
+#     row_title         = "Modules",
+#     column_title      = paste0(cl, " - LM omnibus (eigengene ~ ", lm_formula_rhs, ")"),
+#     show_row_names    = TRUE,
+#     show_column_names = TRUE,
+#     na_col            = "grey90",
+#     column_names_rot  = 45,
+#     column_names_gp   = gpar(fontsize = 9),
+#     row_names_gp      = gpar(fontsize = 9)
+#   )
+# }
+#
+# largest_lm <- names(ht_list_lm)[which.max(sapply(ht_list_lm, function(h) nrow(h@matrix)))]
+# pdf(NULL)
+# ht_drawn <- draw(ht_list_lm[[largest_lm]], heatmap_legend_side = "right")
+# lm_pdf_height <- convertHeight(ComplexHeatmap:::height(ht_drawn), "inches", valueOnly = TRUE)
+# lm_pdf_width  <- convertWidth(ComplexHeatmap:::width(ht_drawn),  "inches", valueOnly = TRUE)
+# dev.off()
+#
+# pdf(file  = paste0(out_dir, script_ind, "Module_trait_lm_heatmap_by_cluster.pdf"),
+#     width  = lm_pdf_width,
+#     height = lm_pdf_height)
+# for (cl in names(ht_list_lm)) {
+#   draw(ht_list_lm[[cl]], heatmap_legend_side = "right")
+# }
+# dev.off()
 
 
 ######################################################################
@@ -761,6 +908,8 @@ dev.off()
 
 ######################################################################
 ###plot module eigengene vs group scatterplot by sample and module
+### + Kruskal-Wallis p-value per panel
+### + pairwise Wilcoxon results saved to CSV with BH-FDR
 ######################################################################
 
 m1 = bulk_data$wgcna$mod_eigengene_mat
@@ -772,51 +921,249 @@ gr = unique(meta$group)
 cluster_names = unique(meta$cluster_name)
 
 pl = list()
+pw_res = list()
+kw_res = list()
+
+# helper: format p-value short
+fmt_p = function(p) {
+  if (is.na(p)) return("NA")
+  if (p < 0.001) return("<0.001")
+  formatC(p, digits = 3, format = "f")
+}
 
 for (mod1 in rownames(m1)){
-  
+
   for (cl in cluster_names){
-    
+
     meta_cl = meta[meta$cluster_name == cl,]
-    
+
     t1 = cbind(meta_cl, module = mod1, eigengene = m1[mod1, meta_cl$cluster_sample])
-    
-    t1_sum <- t1 %>%
-      group_by(group) %>%
-      summarise(
-        mean_eigengene = mean(eigengene),
-        sd_eigengene = sd(eigengene),
-        # Calculate the upper and lower bounds for the error bar
-        ymin_eigengene = mean_eigengene - sd_eigengene,
-        ymax_eigengene = mean_eigengene + sd_eigengene
-      )
-    
-    pl[[paste0(mod1, "_", cl)]] = ggplot()+
-      geom_errorbar(data = t1_sum, aes(x = group, ymin = ymin_eigengene, ymax = ymax_eigengene), 
-                    width = 0.2, color = "grey30") +
-      geom_point(data = t1_sum, aes(x = group, y = mean_eigengene, fill = group), size = 3, 
-                 shape = 21, color = "grey30") +
-      geom_point(data = t1, aes(x = group, y = eigengene, fill = group), shape = 21, 
-                 position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.5), 
-                 size = 1, stroke = 0.3, color = "grey50")+
+
+    grp_present = intersect(gr, unique(t1$group))
+
+    # overall Kruskal-Wallis across groups present
+    kw_p = NA_real_
+    if (length(grp_present) >= 2) {
+      grp_ns = table(factor(t1$group, levels = grp_present))
+      if (sum(grp_ns >= 2) >= 2) {
+        kw_p = suppressWarnings(
+          kruskal.test(eigengene ~ factor(group, levels = grp_present), data = t1)$p.value
+        )
+      }
+    }
+    kw_res[[length(kw_res) + 1]] = data.frame(
+      cluster = cl, module = mod1,
+      n_groups = length(grp_present),
+      n_total  = nrow(t1),
+      kw_pvalue = kw_p,
+      stringsAsFactors = FALSE
+    )
+
+    # pairwise Wilcoxon across all group pairs present (saved to CSV only)
+    pairs = combn(grp_present, 2, simplify = FALSE)
+
+    pair_df = data.frame(
+      cluster = cl, module = mod1,
+      g1 = sapply(pairs, `[`, 1), g2 = sapply(pairs, `[`, 2),
+      n1 = NA_integer_, n2 = NA_integer_,
+      pvalue = NA_real_, stringsAsFactors = FALSE
+    )
+    for (pi in seq_along(pairs)) {
+      x = t1$eigengene[t1$group == pairs[[pi]][1]]
+      y = t1$eigengene[t1$group == pairs[[pi]][2]]
+      pair_df$n1[pi] = length(x)
+      pair_df$n2[pi] = length(y)
+      if (length(x) >= 2 && length(y) >= 2) {
+        pair_df$pvalue[pi] = suppressWarnings(
+          wilcox.test(x, y, exact = FALSE)$p.value
+        )
+      }
+    }
+    pw_res[[length(pw_res) + 1]] = pair_df
+
+    pl[[paste0(mod1, "_", cl)]] = ggplot(t1, aes(x = group, y = eigengene))+
+      geom_boxplot(aes(fill = group), outlier.shape = NA, alpha = 0.6,
+                   color = "grey30", width = 0.6) +
+      geom_point(aes(fill = group), shape = 21,
+                 position = position_jitter(width = 0.15, height = 0),
+                 size = 1, stroke = 0.3, color = "grey30")+
       geom_hline(yintercept = 0)+
       scale_x_discrete(limits = gr)+
       scale_color_manual(limits = gr, values = pal(gr))+
       scale_fill_manual(limits = gr, values = pal(gr))+
       theme_classic()+
-      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))+
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+            legend.position = "none")+
       labs(title = paste0(mod1, " - ", cl, " - Module eigengene by group"))
-    
+
   }
 }
 
+# combine Kruskal-Wallis results, BH across all (cluster x module)
+kw_long = do.call(rbind, kw_res)
+kw_long$kw_padj = p.adjust(kw_long$kw_pvalue, method = "BH")
 
-pdf(file = paste0(out_dir,script_ind, "Module_eigengene_vs_group_scatterplot_by_cluster.pdf"), 
-    width = 4, height = 3)
+write_csv(kw_long,
+          file = paste0(out_dir, script_ind, "Module_eigengene_vs_group_kruskal_wallis.csv"))
+
+# combine pairwise results, BH across all (cluster x module x pair)
+pw_long = do.call(rbind, pw_res)
+pw_long$padj = p.adjust(pw_long$pvalue, method = "BH")
+
+write_csv(pw_long,
+          file = paste0(out_dir, script_ind, "Module_eigengene_vs_group_pairwise_wilcoxon.csv"))
+
+
+pdf(file = paste0(out_dir,script_ind, "Module_eigengene_vs_group_scatterplot_by_cluster.pdf"),
+    width = 6, height = 3)
 {
   lapply(pl, function(x){x})
 }
 dev.off()
+
+
+
+######################################################################
+### Across-cluster LMM per module (TREM2Variant effect)
+### Pools pseudobulks across clusters to gain power; controls for
+### cluster-level mean offsets and donor-level pseudoreplication via
+### random intercepts. One omnibus test per module + pairwise contrasts.
+######################################################################
+
+message("\n\n          *** Across-cluster LMM per module (TREM2Variant) - ", Sys.time(),"\n\n")
+
+library(lme4)
+library(lmerTest)
+
+  me_mat   = bulk_data$wgcna$mod_eigengene_mat
+  meta_lmm = bulk_data$meta
+  meta_lmm = meta_lmm[match(colnames(me_mat), meta_lmm$cluster_sample), ]
+
+  lmm_omni_list  = list()
+  lmm_pairs_list = list()
+
+  for (mod1 in rownames(me_mat)){
+
+    df1 = data.frame(
+      eigengene    = as.numeric(me_mat[mod1, ]),
+      TREM2Variant = factor(meta_lmm$TREM2Variant),
+      cluster_name = factor(meta_lmm$cluster_name),
+      sample       = factor(meta_lmm$sample),
+      stringsAsFactors = FALSE
+    )
+    df1 = df1[complete.cases(df1), ]
+    df1$TREM2Variant = droplevels(df1$TREM2Variant)
+    df1$cluster_name = droplevels(df1$cluster_name)
+    df1$sample       = droplevels(df1$sample)
+
+    if (nlevels(df1$TREM2Variant) < 2) next
+
+    fit = tryCatch(
+      lmerTest::lmer(eigengene ~ TREM2Variant + (1 | cluster_name) + (1 | sample),
+                     data = df1, REML = TRUE),
+      error = function(e) NULL
+    )
+    if (is.null(fit)) next
+
+    # Omnibus Type-II F-test (Satterthwaite df via lmerTest) for TREM2Variant
+    aov1 = tryCatch(anova(fit, type = 2), error = function(e) NULL)
+    get_aov = function(col){
+      if (!is.null(aov1) && "TREM2Variant" %in% rownames(aov1) && col %in% colnames(aov1)){
+        aov1["TREM2Variant", col]
+      } else NA_real_
+    }
+
+    lmm_omni_list[[mod1]] = data.frame(
+      module     = mod1,
+      n_obs      = nrow(df1),
+      n_clusters = nlevels(df1$cluster_name),
+      n_samples  = nlevels(df1$sample),
+      F_value    = get_aov("F value"),
+      num_df     = get_aov("NumDF"),
+      den_df     = get_aov("DenDF"),
+      pvalue     = get_aov("Pr(>F)"),
+      stringsAsFactors = FALSE
+    )
+
+    # Pairwise contrasts between TREM2 variants (Satterthwaite df via lmerTest::contest)
+    lv       = levels(df1$TREM2Variant)
+    ref      = lv[1]
+    fe_names = names(fixef(fit))
+    n_fe     = length(fe_names)
+    all_pairs = combn(lv, 2, simplify = FALSE)
+
+    pairs_rows = list()
+    for (pp in all_pairs){
+      g1 = pp[1]; g2 = pp[2]
+      L = rep(0, n_fe)
+      if (g1 != ref) L[which(fe_names == paste0("TREM2Variant", g1))] = -1
+      if (g2 != ref) L[which(fe_names == paste0("TREM2Variant", g2))] =  1
+
+      ct = tryCatch(
+        lmerTest::contest(fit, L = matrix(L, nrow = 1), joint = FALSE),
+        error = function(e) NULL
+      )
+      if (is.null(ct) || nrow(ct) == 0) next
+
+      pairs_rows[[length(pairs_rows) + 1]] = data.frame(
+        module   = mod1,
+        contrast = paste0(g2, " - ", g1),
+        estimate = ct[1, "Estimate"],
+        SE       = ct[1, "Std. Error"],
+        df       = ct[1, "df"],
+        t.ratio  = ct[1, "t value"],
+        p.value  = ct[1, "Pr(>|t|)"],
+        stringsAsFactors = FALSE
+      )
+    }
+    if (length(pairs_rows) > 0){
+      lmm_pairs_list[[mod1]] = do.call(rbind, pairs_rows)
+    }
+  }
+
+  lmm_omni  = do.call(rbind, lmm_omni_list)
+  lmm_pairs = do.call(rbind, lmm_pairs_list)
+
+  if (!is.null(lmm_omni) && nrow(lmm_omni) > 0){
+    lmm_omni$padj_BH = p.adjust(lmm_omni$pvalue, method = "BH")
+    write_csv(lmm_omni,
+              file = paste0(out_dir, script_ind, "Module_eigengene_LMM_across_clusters_omnibus.csv"))
+  }
+
+  if (!is.null(lmm_pairs) && nrow(lmm_pairs) > 0){
+    lmm_pairs$padj_BH = p.adjust(lmm_pairs$p.value, method = "BH")
+    write_csv(lmm_pairs,
+              file = paste0(out_dir, script_ind, "Module_eigengene_LMM_across_clusters_pairwise.csv"))
+
+    # Forest plot: pairwise contrasts per module, estimate ± 95% CI
+    fp = lmm_pairs
+    fp$ci_lo     = fp$estimate - 1.96 * fp$SE
+    fp$ci_hi     = fp$estimate + 1.96 * fp$SE
+    fp$sig_label = ifelse(is.na(fp$padj_BH), "",
+                   ifelse(fp$padj_BH < 0.001, "***",
+                   ifelse(fp$padj_BH < 0.01,  "**",
+                   ifelse(fp$padj_BH < 0.05,  "*", ""))))
+
+    p_fp = ggplot(fp, aes(x = estimate, y = module, color = contrast))+
+      geom_vline(xintercept = 0, linetype = "dashed", color = "grey60")+
+      geom_errorbarh(aes(xmin = ci_lo, xmax = ci_hi), height = 0.25,
+                     position = position_dodge(width = 0.6))+
+      geom_point(position = position_dodge(width = 0.6), size = 2)+
+      geom_text(aes(label = sig_label),
+                position = position_dodge(width = 0.6),
+                hjust = -0.4, size = 4, show.legend = FALSE)+
+      scale_y_discrete(limits = rev(rownames(me_mat)))+
+      labs(title = "Across-cluster LMM: TREM2 variant contrasts per module",
+           subtitle = "Estimate ± 95% CI; BH-FDR: * <0.05, ** <0.01, *** <0.001",
+           x = "Eigengene difference (LMM estimate)", y = "Module")+
+      theme_classic()
+
+    pdf(file = paste0(out_dir, script_ind, "Module_eigengene_LMM_across_clusters_forestplot.pdf"),
+        width = 8,
+        height = max(4, length(unique(fp$module)) * 0.4 + 2))
+    plot(p_fp)
+    dev.off()
+  }
 
 
 
@@ -993,9 +1340,13 @@ for (i in 1:N_comps){
   t1 = t1[t1$p.adjust<0.05,]
 
   if (nrow(t1)>2){
-    edo <- pairwise_termsim(edo)
-    p1 = emapplot(edo, showCategory = 100)+labs(title = comp)
-    pl[[comp]] <- p1
+    tryCatch({
+      edo <- pairwise_termsim(edo)
+      p1 = emapplot(edo, showCategory = 100)+labs(title = comp)
+      pl[[comp]] <- p1
+    }, error = function(e){
+      message("    skipping emapplot for ", comp, ": ", conditionMessage(e))
+    })
   }
 }
 
@@ -1088,14 +1439,17 @@ for (pl_set in names(go_genes_list)){
 }
 
 
-go_pdf_height = max(ceiling(max(sapply(go_genes_list, length)) * 0.5 / 2.54) + 5, 8)
+largest_go_set <- names(which.max(sapply(go_genes_list, length)))
+pdf(NULL)
+ht_drawn <- draw(ht_list[[largest_go_set]], heatmap_legend_side = "right", annotation_legend_side = "right")
+go_pdf_height <- convertHeight(ComplexHeatmap:::height(ht_drawn), "inches", valueOnly = TRUE)
+go_pdf_width  <- convertWidth(ComplexHeatmap:::width(ht_drawn),  "inches", valueOnly = TRUE)
+dev.off()
 
-pdf(file = paste0(out_dir,script_ind, "Gene_expression_heatmap_module_GO_genes_by_sample.pdf"),
-    width = 10, height = go_pdf_height)
-{
-  for (pl_set in names(go_genes_list)){
-    draw(ht_list[[pl_set]], heatmap_legend_side = "right", annotation_legend_side = "right")
-  }
+pdf(file = paste0(out_dir, script_ind, "Gene_expression_heatmap_module_GO_genes_by_sample.pdf"),
+    width = go_pdf_width, height = go_pdf_height)
+for (pl_set in names(go_genes_list)){
+  draw(ht_list[[pl_set]], heatmap_legend_side = "right", annotation_legend_side = "right")
 }
 dev.off()
 
@@ -1136,15 +1490,18 @@ for (pl_set in names(GOI)){
   )
 }
 
-goi_pdf_height = max(ceiling(max(sapply(names(GOI), function(x)
-  length(intersect(GOI[[x]], rownames(pl_mat_X))))) * 0.15 / 2.54) + 5, 8)
+largest_goi_set <- names(which.max(sapply(names(GOI), function(x)
+  length(intersect(GOI[[x]], rownames(pl_mat_X))))))
+pdf(NULL)
+ht_drawn <- draw(ht_list[[largest_goi_set]], heatmap_legend_side = "right", annotation_legend_side = "right")
+goi_pdf_height <- convertHeight(ComplexHeatmap:::height(ht_drawn), "inches", valueOnly = TRUE)
+goi_pdf_width  <- convertWidth(ComplexHeatmap:::width(ht_drawn),  "inches", valueOnly = TRUE)
+dev.off()
 
-pdf(file = paste0(out_dir,script_ind, "Gene_expression_heatmap_GOI_by_sample.pdf"),
-    width = 10, height = goi_pdf_height)
-{
-  for (pl_set in names(GOI)){
-    draw(ht_list[[pl_set]], heatmap_legend_side = "right", annotation_legend_side = "right")
-  }
+pdf(file = paste0(out_dir, script_ind, "Gene_expression_heatmap_GOI_by_sample.pdf"),
+    width = goi_pdf_width, height = goi_pdf_height)
+for (pl_set in names(GOI)){
+  draw(ht_list[[pl_set]], heatmap_legend_side = "right", annotation_legend_side = "right")
 }
 dev.off()
 
@@ -1191,12 +1548,18 @@ for (pl_set in names(pl_gene_list )){
 }
 
 
-pdf(file = paste0(out_dir,script_ind, "Gene_expression_heatmap_subtype_marker_list_by_sample.pdf"), 
-    width = 10, height = 10)
-{
-  for (pl_set in names(pl_gene_list )){
-    draw(ht_list[[pl_set]], heatmap_legend_side = "right", annotation_legend_side = "right")
-  }
+largest_marker_set <- names(which.max(sapply(names(ht_list), function(x)
+  nrow(ht_list[[x]]@matrix))))
+pdf(NULL)
+ht_drawn <- draw(ht_list[[largest_marker_set]], heatmap_legend_side = "right", annotation_legend_side = "right")
+marker_pdf_height <- convertHeight(ComplexHeatmap:::height(ht_drawn), "inches", valueOnly = TRUE)
+marker_pdf_width  <- convertWidth(ComplexHeatmap:::width(ht_drawn),  "inches", valueOnly = TRUE)
+dev.off()
+
+pdf(file = paste0(out_dir, script_ind, "Gene_expression_heatmap_subtype_marker_list_by_sample.pdf"),
+    width = marker_pdf_width, height = marker_pdf_height)
+for (pl_set in names(ht_list)){
+  draw(ht_list[[pl_set]], heatmap_legend_side = "right", annotation_legend_side = "right")
 }
 dev.off()
 
