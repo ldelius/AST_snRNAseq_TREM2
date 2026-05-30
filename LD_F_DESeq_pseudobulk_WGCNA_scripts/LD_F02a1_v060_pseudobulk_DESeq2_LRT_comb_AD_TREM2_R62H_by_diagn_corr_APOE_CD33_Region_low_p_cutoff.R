@@ -34,7 +34,7 @@ setwd(main_dir)
 out_dir = paste0(main_dir,"LD_F_DESeq_pseudobulk_WGCNA/")
 
 #specify script/output index as prefix for file names
-script_ind = "LD_F02a1_v02_"
+script_ind = "LD_F02a1_v03_"
 
 
 ### load dataset; remove Control samples
@@ -45,7 +45,8 @@ t1 = bulk_data$gr_tab
 
 #remove Control samples - this script works with both risk variants combined!!
 t1 = t1[t1$NeuropathologicalDiagnosis != "Control" &
-          !is.na(t1$CD33Group) & !is.na(t1$APOEgroup) & !is.na(t1$BrainRegion),]
+          !is.na(t1$CD33Group) & !is.na(t1$APOEgroup) & !is.na(t1$BrainRegion) &
+          !is.na(t1$PostMortemInterval),]
 
 gr_tab = t1
 
@@ -63,6 +64,7 @@ t1$APOEgroup = factor(t1$APOEgroup, levels = c("APOE4-neg", "APOE4-pos"))
 t1$CD33Group = factor(t1$CD33Group, levels = c("CV","CD33var"))
 t1$BrainRegion = factor(t1$BrainRegion, levels = c("MTG","SSC"))
 t1$cohort = factor(t1$cohort, levels = unique(t1$cohort))
+t1$PostMortemInterval = as.numeric(t1$PostMortemInterval)
 
 bulk_data$meta = t1
 
@@ -70,13 +72,17 @@ m1 = bulk_data$counts
 m2 = m1[,bulk_data$meta$cluster_sample]
 bulk_data$counts = m2
 
+#add per-pseudobulk RNA counts (library size) as covariate; use log10 to stabilise scale
+bulk_data$meta$nCount_RNA = colSums(bulk_data$counts)[bulk_data$meta$cluster_sample]
+bulk_data$meta$log10_nCount_RNA = log10(bulk_data$meta$nCount_RNA)
 
-### define formula for extracting differential genes to use for WGCNA 
-form_full = "~cohort + BrainRegion + APOEgroup  + CD33Group + cluster_name  + TREM2Variant"
-form_red = "~cohort + BrainRegion + APOEgroup  + CD33Group  + cluster_name"
+
+### define formula for extracting differential genes to use for WGCNA
+form_full = "~cohort + BrainRegion + APOEgroup  + CD33Group + PostMortemInterval + log10_nCount_RNA + cluster_name  + TREM2Variant"
+form_red = "~cohort + BrainRegion + APOEgroup  + CD33Group + PostMortemInterval + log10_nCount_RNA + cluster_name"
 
 ### define covariates to correct vst matrix for
-covars_corr = c("cohort", "BrainRegion", "APOEgroup", "CD33Group")
+covars_corr = c("cohort", "BrainRegion", "APOEgroup", "CD33Group", "PostMortemInterval", "log10_nCount_RNA")
 
 
 ###get marker gene panels
@@ -241,7 +247,11 @@ vst_mat_corr = vst_mat
 
 for (cov1 in covars_corr){
   if (length(unique(comp_meta[[cov1]]))>1){
-    vst_mat_corr = limma::removeBatchEffect(vst_mat_corr, batch = comp_meta[[cov1]], group = comp_meta$group)
+    if (is.numeric(comp_meta[[cov1]])){
+      vst_mat_corr = limma::removeBatchEffect(vst_mat_corr, covariates = comp_meta[[cov1]], group = comp_meta$group)
+    } else {
+      vst_mat_corr = limma::removeBatchEffect(vst_mat_corr, batch = comp_meta[[cov1]], group = comp_meta$group)
+    }
   } else {vst_mat_corr = vst_mat_corr}
 }
 
