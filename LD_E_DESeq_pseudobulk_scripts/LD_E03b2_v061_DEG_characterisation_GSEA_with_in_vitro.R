@@ -60,6 +60,9 @@ for (set1 in unique(t1$gene_set)){
   gsea_sets[[set1]] = t2$gene
 }
 
+# drop unwanted user-defined sets
+gsea_sets[c("other_immune", "other_GOI", "McQuade20_KO_up", "McQuade20_KO_down")] = NULL
+
 
 lengths(gsea_sets)
 
