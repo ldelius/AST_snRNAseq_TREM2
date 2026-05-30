@@ -1,0 +1,315 @@
+message("\n\n##########################################################################\n",
+        "# Start G02a: CellChat ungrouped (one CellChat across all cells) ", Sys.time(),
+        "\n##########################################################################\n",
+        "     LD_G02a - ungrouped (this script)\n",
+        "     LD_G02b - TREM2Variant (CV / R47H / R62H)\n",
+        "     LD_G02c - TREM2Variant x NeuropathologicalDiagnosis (6 splits)\n",
+        "\n   Parameters: assay='RNA' (LogNormalize from G01b), type='triMean', nboot=100,\n",
+        "   filterCommunication(min.cells = 10) post-hoc, cluster_sample cap of 200,\n",
+        "   required because full data caused computeCommunProb OOM\n",
+        "   at 500 GB).\n",
+        "\n##########################################################################\n\n")
+
+
+#set environment/load packages
+library(qs)
+library(tidyverse)
+library(Seurat)
+library(CellChat)
+library(patchwork)
+library(future)
+
+options(stringsAsFactors = FALSE)
+options(future.globals.maxSize = 50 * 1024^3)
+
+
+### define directories and script index
+
+main_dir = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2/"
+setwd(main_dir)
+
+#specify script/output index as prefix for file names
+script_ind = "LD_G02a_v001_"
+
+#specify output directory
+out_dir = paste0(main_dir, "LD_G_MIC_AST_communication_analysis_output/")
+if (!dir.exists(out_dir)){dir.create(out_dir, recursive = TRUE)}
+
+#specify input paths
+in_seur     = paste0(out_dir, "LD_G01b_seur_merged.qs")
+in_DEGs_AST = paste0(main_dir, "LD_E_DESeq_pseudobulk/LD_E02a2_v02_bulk_data.qs")
+in_DEGs_MIC = paste0(main_dir, "data_TREM2_michael/E_DESeq_pseudobulk/E02a2_bulk_data.qs")
+
+
+#parallelisation
+n_workers = 8
+future::plan("multisession", workers = n_workers)
+
+
+#CellChat parameters
+cc_type      = "triMean"
+cc_nboot     = 100
+cc_min_cells = 10
+cc_seed      = 42      # passed to computeCommunProb's seed.use (CellChat's built-in mechanism for parallel-safe bootstrap reproducibility)
+
+
+#cluster_sample cap: keep at most N cells from each cluster_sample combination.
+#Necessary because full data (304k cells) caused computeCommunProb to OOM at
+#500 GB. Capping per cluster_sample (rather than per cluster as CellChat tutorial
+#suggests) preserves sample-level balance, so each donor should contribute proportionally.
+cap_cluster_sample = 200
+
+
+
+###########################################################
+# 1a. load merged Seurat, set samples column for CellChat
+###########################################################
+
+message("\n\n          *** Load merged Seurat... ", Sys.time(), "\n\n")
+
+
+seur = qread(file = in_seur)
+DefaultAssay(seur) = "RNA"
+
+
+#CellChat v2 looks for a 'samples' column in meta to track per-sample structure.
+#G01b uses 'sample' (singular); duplicate to 'samples' (plural) before createCellChat.
+seur$samples = seur$sample
+
+#refresh Idents (cluster_name) and drop any unused factor levels
+seur$cluster_name = droplevels(factor(seur$cluster_name))
+Idents(seur) = "cluster_name"
+
+cat("Cells loaded:", ncol(seur), "\n")
+cat("N clusters:", length(levels(seur$cluster_name)), "\n")
+cat("N samples:", length(unique(seur$samples)), "\n\n")
+
+
+
+###########################################################
+# 1b. cap cells per cluster_sample combination
+###########################################################
+
+#Sample-balanced downsampling. Each cluster_sample combination capped at
+#cap_cluster_sample cells. Combos already smaller than the cap are unchanged.
+
+message("\n\n          *** Cap cells per cluster_sample at ", cap_cluster_sample, "... ", Sys.time(), "\n\n")
+
+
+set.seed(cc_seed)
+
+
+### tally and identify which cluster_samples need capping
+t_cs = seur@meta.data %>% as_tibble() %>%
+  count(cluster_sample, name = "n_cells") %>%
+  mutate(capped = n_cells > cap_cluster_sample,
+         n_after = pmin(n_cells, cap_cluster_sample))
+
+cat("cluster_sample summary:\n",
+    "  total cluster_samples:        ", nrow(t_cs), "\n",
+    "  combos > cap (",  cap_cluster_sample, "):       ", sum(t_cs$capped), "\n",
+    "  cells before cap (total):     ", sum(t_cs$n_cells), "\n",
+    "  cells after cap (estimated):  ", sum(t_cs$n_after), "\n",
+    sep = "")
+
+
+### draw a sample of cells to keep, per cluster_sample
+cell_ids_keep = seur@meta.data %>%
+  rownames_to_column("cell_id") %>%
+  group_by(cluster_sample) %>%
+  slice_sample(n = cap_cluster_sample) %>%
+  pull(cell_id)
+
+seur = seur[, cell_ids_keep]
+
+
+cat("\nCells after cluster_sample cap:", ncol(seur), "\n\n")
+
+
+### refresh Idents (some clusters may have shrunk a lot)
+seur$cluster_name = droplevels(factor(seur$cluster_name))
+Idents(seur) = "cluster_name"
+
+
+### save the cap diagnostic
+write_csv(t_cs, paste0(out_dir, script_ind, "cluster_sample_cap_summary.csv"))
+
+
+
+###########################################################
+# 2. cell-count diagnostic (no group split here, just per cluster)
+###########################################################
+
+seur@meta.data %>% count(cluster_name, name = "n_cells") %>% arrange(n_cells) %>%
+  write_csv(paste0(out_dir, script_ind, "cells_per_cluster.csv"))
+
+
+###########################################################
+# 3. load DEGs (AST + MIC), build DEG-filtered CellChatDB
+###########################################################
+
+message("\n\n          *** Build DEG-filtered CellChatDB... ", Sys.time(), "\n\n")
+
+
+DEGs_comb = NULL
+
+
+### AST DEGs
+if (file.exists(in_DEGs_AST)){
+  bd_ast = qread(in_DEGs_AST)
+  DEGs_comb = unique(c(DEGs_comb, unlist(bd_ast$DEGs)))
+  cat("Loaded AST DEGs from:", in_DEGs_AST, "- total unique genes so far:", length(DEGs_comb), "\n")
+  rm(bd_ast); gc()
+} else {
+  stop("AST DEG file not found: ", in_DEGs_AST)
+}
+
+
+### MIC DEGs
+if (file.exists(in_DEGs_MIC)){
+  bd_mic = qread(in_DEGs_MIC)
+  DEGs_comb = unique(c(DEGs_comb, unlist(bd_mic$DEGs)))
+  cat("Loaded MIC DEGs from:", in_DEGs_MIC, "- total unique genes after MIC merge:", length(DEGs_comb), "\n")
+  rm(bd_mic); gc()
+} else {
+  stop("MIC DEG file not found: ", in_DEGs_MIC)
+}
+
+
+cat("Total unique DEGs for DB filtering:", length(DEGs_comb), "\n")
+
+
+### filter CellChatDB.human (full DB, all subsets) to interactions involving any DEG
+CellChatDB = CellChatDB.human
+
+#check which complexes contain any DEG
+#drop = FALSE prevents R collapsing to a vector if exactly one row matches
+#(would silently NULL out rownames() and break the downstream filter)
+t1 = CellChatDB
+t2 = t1$complex
+t3 = apply(t2, c(1,2), `%in%`, DEGs_comb)
+complexes_with_DEGs = t3[apply(t3, 1, any), , drop = FALSE]
+
+#check which cofactors contain any DEG
+t2 = t1$cofactor
+t3 = apply(t2, c(1,2), `%in%`, DEGs_comb)
+cofactors_with_DEGs = t3[apply(t3, 1, any), , drop = FALSE]
+
+#filter interaction table: keep rows where ligand, receptor, agonist or antagonist
+#contains any DEG (directly, or via a DEG-containing complex/cofactor)
+t2 = t1$interaction
+t3 = t2[t2$ligand    %in% DEGs_comb |
+        t2$ligand    %in% rownames(complexes_with_DEGs) |
+        t2$receptor  %in% DEGs_comb |
+        t2$receptor  %in% rownames(complexes_with_DEGs) |
+        t2$agonist   %in% rownames(cofactors_with_DEGs) |
+        t2$antagonist %in% rownames(cofactors_with_DEGs), ]
+
+CellChatDB.use = subsetDB(CellChatDB, search = t3$interaction_name, key = "interaction_name")
+
+cat("\nCellChatDB filtering:\n",
+    "  Full DB interactions: ", nrow(CellChatDB$interaction), "\n",
+    "  After DEG filter:     ", nrow(t3), "\n", sep = "")
+
+
+
+###########################################################
+# 4. helper function: full CellChat run for one Seurat object
+###########################################################
+
+run_cellchat = function(seur_in, run_label, db_use,
+                        cc_type, cc_nboot, cc_min_cells, cc_seed,
+                        out_dir, script_ind){
+
+  message("\n\n   *** Run CellChat: ", run_label, " - ", Sys.time(), "\n")
+  cat("       cells:", ncol(seur_in), "  clusters:", length(unique(Idents(seur_in))),
+      "  samples:", length(unique(seur_in$samples)), "\n")
+
+
+  ### create CellChat object from RNA log-normalised data
+  cellchat = createCellChat(object = seur_in, group.by = "ident", assay = "RNA")
+  cellchat@DB = db_use
+
+
+  ### preprocess: subset to DB genes, identify over-expressed genes/interactions
+  cellchat = subsetData(cellchat)
+  cellchat = identifyOverExpressedGenes(cellchat)
+  cellchat = identifyOverExpressedInteractions(cellchat)
+
+
+  ### compute communication probabilities
+  #seed.use is CellChat's parallel-safe seed - propagates to workers internally
+  cellchat = computeCommunProb(cellchat, type = cc_type, nboot = cc_nboot,
+                               seed.use = cc_seed)
+
+
+  ### post-hoc filter: drop edges where either cluster has < min_cells in this split
+  cellchat = filterCommunication(cellchat, min.cells = cc_min_cells)
+
+
+  ### pathway-level aggregation and network summaries
+  cellchat = computeCommunProbPathway(cellchat)
+  cellchat = aggregateNet(cellchat)
+
+
+  ### save individual run output
+  qsave(cellchat,
+        file = paste0(out_dir, script_ind, "cellchat_", run_label, ".qs"))
+
+  message("       Saved: ", out_dir, script_ind, "cellchat_", run_label, ".qs - ", Sys.time())
+
+  return(cellchat)
+}
+
+
+
+###########################################################
+# 5. RUN: ungrouped CellChat across all cells
+###########################################################
+
+message("\n\n##########################################################################\n",
+        "# RUN: Ungrouped CellChat ", Sys.time(),
+        "\n##########################################################################\n\n")
+
+
+cc = run_cellchat(
+  seur_in      = seur,
+  run_label    = "ungrouped",
+  db_use       = CellChatDB.use,
+  cc_type      = cc_type,
+  cc_nboot     = cc_nboot,
+  cc_min_cells = cc_min_cells,
+  cc_seed      = cc_seed,
+  out_dir      = out_dir,
+  script_ind   = script_ind
+)
+
+rm(cc); gc()
+
+
+
+###########################################################
+# 6. companion metadata file
+###########################################################
+
+#small file holding DB, DEG list, and parameters - useful at downstream/plotting
+#time without needing to load the cellchat object
+qsave(list(CellChatDB.use = CellChatDB.use,
+           DEGs_comb      = DEGs_comb,
+           params         = list(type      = cc_type,
+                                 nboot     = cc_nboot,
+                                 min.cells = cc_min_cells,
+                                 seed.use  = cc_seed,
+                                 cap_cluster_sample = cap_cluster_sample,
+                                 assay     = "RNA",
+                                 n_workers = n_workers)),
+      file = paste0(out_dir, script_ind, "cellchat_metadata.qs"))
+
+
+
+sessionInfo()
+
+
+message("\n\n##########################################################################\n",
+        "# Completed G02a ", Sys.time(),
+        "\n##########################################################################\n\n")
