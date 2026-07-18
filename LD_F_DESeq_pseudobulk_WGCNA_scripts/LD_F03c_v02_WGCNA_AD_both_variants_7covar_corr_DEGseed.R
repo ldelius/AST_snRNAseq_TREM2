@@ -1258,13 +1258,11 @@ if (!is.null(lmm_omni) && nrow(lmm_omni) > 0){
   lmm_act_labels = lmm_omni %>%
     select(module, pvalue, padj_BH) %>%
     mutate(
-      p_label = case_when(
-        is.na(pvalue)  ~ "",
-        pvalue < 0.001 ~ paste0("p=", formatC(pvalue, digits = 1, format = "e")),
-        TRUE           ~ paste0("p=", formatC(pvalue, digits = 3, format = "f"))
-      ),
-      sig   = ifelse(!is.na(padj_BH) & padj_BH < 0.05, "*", ""),
-      annot = paste0(p_label, sig)
+      annot = case_when(
+        is.na(padj_BH)   ~ "",
+        padj_BH < 0.001  ~ paste0("FDR=", formatC(padj_BH, digits = 1, format = "e")),
+        TRUE             ~ paste0("FDR=", formatC(padj_BH, digits = 3, format = "f"))
+      )
     )
   t_act = left_join(t_act, lmm_act_labels[, c("module", "annot")], by = "module")
 } else {
