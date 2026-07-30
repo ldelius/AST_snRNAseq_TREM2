@@ -13,6 +13,16 @@ message("\n\n###################################################################
 # - runs canCorPairs collinearity check, writes correlation matrix + plot
 # - writes per-gene variance CSV and the plotVarPart variance-explained plot
 # change from michaels script: I did not use ApoE as primary_var (only TREM2)
+# changes:
+#  1. added N_cells_scaled as a fixed-effect covariate (technical, not removed by VST size factors)
+#  2. dropped RNA_counts_scaled: 0.944 collinear with N_cells & redundant with VST size factors;
+#     keeping both split/inflated the technical variance and washed out pathology in the canCorPairs plot
+#  3. (intermediate) had bumped output index to v02 during the N_cells experiment
+#  4. FINAL: reverted to original technical-covariate set - removed N_cells_scaled (0.782 collinear
+#     with cluster_name, already modelled) and kept RNA_counts_scaled (pathology stays visible in
+#     canCorPairs). This RNA-only result is the version stored in the v02 outputs (final, in use).
+#     NB: N_cells/RNA are NOT used in the WGCNA correction (that is the 5 GSEA covariates) -
+#     this only affects the H01 varPart diagnostic/figure.
 
 # Open packages necessary for analysis.
 library(qs)
@@ -37,7 +47,7 @@ out_dir = paste0(main_dir,"LD_H_VarPartition_output/")
 if (!dir.exists(out_dir)){dir.create(out_dir, recursive = TRUE)}
 
 #specify script/output index as prefix for file names
-script_ind = "LD_H01_v01_"
+script_ind = "LD_H01_v02_"
 
 
 ### load dataset
