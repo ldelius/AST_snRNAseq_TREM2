@@ -20,7 +20,7 @@ b04_path = file.path(base, "LD_B_AST_analysis_output/LD_B04a_v02_seur.qs")
 clust_csv= file.path(base, "LD_B_AST_analysis_output/LD_B03a_cluster_assignment.csv")
 out_dir  = file.path(base, "LD_X_Thesis_Presentation_output")
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-script_ind = "LD_X02_"
+script_ind = "LD_X02_v02_"
 for (p in c(b01_path, b04_path, clust_csv))
   if (!file.exists(p)) stop("Missing input: ", p)
 message("base: ", base, "\nout:  ", out_dir)
@@ -38,18 +38,22 @@ point_layer = function() {
 
 # place each category's name at the centre (median position) of its points,
 # so the cluster is labelled directly on the UMAP instead of (only) in a legend.
-label_layer = function(df, col) {
+label_layer = function(df, col, emphasise = NULL, emph_size = 4.2) {
   cen = df %>%
     group_by(.lab = .data[[col]]) %>%
-    summarise(UMAP_1 = median(UMAP_1), UMAP_2 = median(UMAP_2), .groups = "drop")
-  if (use_repel)
-    ggrepel::geom_text_repel(data = cen, aes(UMAP_1, UMAP_2, label = .lab),
-                             inherit.aes = FALSE, size = 2.6, fontface = "bold",
+    summarise(UMAP_1 = median(UMAP_1), UMAP_2 = median(UMAP_2), .groups = "drop") %>%
+    mutate(.size = if (is.null(emphasise)) 2.6 else if_else(.lab %in% emphasise, emph_size, 2.6))
+  geom = if (use_repel)
+    ggrepel::geom_text_repel(data = cen, aes(UMAP_1, UMAP_2, label = .lab, size = .size),
+                             inherit.aes = FALSE, fontface = "bold",
                              colour = "black", bg.color = "white", bg.r = 0.12,
-                             min.segment.length = 0, segment.size = 0.2, max.overlaps = Inf)
+                             min.segment.length = 0, segment.size = 0.2, max.overlaps = Inf,
+                             show.legend = FALSE)
   else
-    geom_text(data = cen, aes(UMAP_1, UMAP_2, label = .lab),
-              inherit.aes = FALSE, size = 2.6, fontface = "bold", colour = "black")
+    geom_text(data = cen, aes(UMAP_1, UMAP_2, label = .lab, size = .size),
+              inherit.aes = FALSE, fontface = "bold", colour = "black",
+              show.legend = FALSE)
+  list(geom, scale_size_identity())
 }
 
 theme_umap = function() theme_classic(base_size = 11) +
@@ -75,14 +79,14 @@ make_pal = function(levels, cb = FALSE) {
   set_names(cols, levels)
 }
 
-mk_umap = function(df, col, title, leg_ncol = 4, label = FALSE, show_legend = TRUE, cb = FALSE) {
+mk_umap = function(df, col, title, leg_ncol = 4, label = FALSE, show_legend = TRUE, cb = FALSE, emphasise = NULL) {
   lv = levels(df[[col]]); if (is.null(lv)) lv = sort(unique(df[[col]]))
   p = ggplot(df, aes(UMAP_1, UMAP_2, colour = .data[[col]])) +
     point_layer() +
     scale_colour_manual(values = make_pal(lv, cb = cb), drop = FALSE) +
     labs(title = title, x = "UMAP 1", y = "UMAP 2") +
     theme_umap()
-  if (label) p = p + label_layer(df, col)
+  if (label) p = p + label_layer(df, col, emphasise = emphasise)
   if (show_legend)
     p = p + guides(colour = guide_legend(override.aes = list(size = 2, alpha = 1), ncol = leg_ncol))
   else
@@ -106,7 +110,10 @@ message("Loading B01 (whole dataset)...")
 s = qread(b01_path)
 df_all = cbind(get_emb(s, "UMAP_Liger"),
                cell_type = as.character(s$cluster_celltype))
-df_all$cell_type = dplyr::recode(df_all$cell_type, "Astro" = "Astrocytes")  # spell out for figure
+df_all$cell_type = dplyr::recode(df_all$cell_type,
+                                  "Astro" = "Astrocytes",
+                                  "Micro" = "Microglia",
+                                  "Oligo" = "Oligodendrocytes")  # spell out for figure; rest kept as abbreviations
 df_all$cell_type = factor(df_all$cell_type, levels = sort(unique(df_all$cell_type)))
 rm(s); gc()
 message("  panel (a) total nuclei: ", nrow(df_all))
@@ -129,7 +136,8 @@ message("  astrocyte subclusters (cluster_name): ", length(unique(as.character(d
 ### assemble one-row figure --------------------------------------------------
 # label = TRUE prints each category name on top of its cluster (at the centroid);
 # show_legend = FALSE then drops the now-redundant legend. Flip either per panel.
-pa = mk_umap(df_all, "cell_type",    "All cell types",        label = TRUE, show_legend = FALSE)
+pa = mk_umap(df_all, "cell_type",    "All cell types",        label = TRUE, show_legend = FALSE,
+             emphasise = "Astrocytes")
 pb = mk_umap(df_ast, "cell_type",    "Astrocyte cluster",    label = TRUE, show_legend = FALSE, cb = TRUE)
 pc = mk_umap(df_ast, "cluster_name", "Astrocyte subclusters", label = TRUE, show_legend = FALSE)
 
