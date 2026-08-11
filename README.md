@@ -6,10 +6,11 @@
 The Alzheimer's disease risk variants TREM2 R47H and R62H are primarily studied in microglia, where TREM2 is most highly expressed. This project examined whether these variants also alter astrocyte transcriptional responses to Alzheimer's disease. The study used a glia-enriched single-nucleus RNA-sequencing dataset from post-mortem cortex, comprising 225,292 astrocyte nuclei from 70 donors stratified by neuropathological diagnosis and TREM2 genotype. Analyses included astrocyte subclustering, differential abundance, pseudobulk differential expression, Gene Ontology over-representation, gene set enrichment, variance partitioning, and co-expression network analysis. The study design and analysis workflow are summarised in Figure 1.
 
 <p align="center">
-  <img src="doc/images/optimise_pp_method.png" width="900">
+  <img src="doc/images/optimise_pp_method.png?v=2" width="900">
 </p>
+
 **Figure 1.** Study design and analysis workflow.
-<br><br>
+
 Input data, intermediate analysis objects, and generated results are not included in this repository. The scripts use project-specific absolute paths that must be updated before reuse.
 
 
