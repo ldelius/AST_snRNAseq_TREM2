@@ -1,25 +1,5 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_F04c v01: TREM2 variance-explained per WGCNA GO term: ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   For each GO-BP term enriched in the v02 WGCNA astrocyte modules, computes",
-        "\n   per-gene TREM2 variance (from H01 variancePartition) under two setups:",
-        "\n",
-        "\n   Setup A  -- genome-level (FAIR, addresses circularity):",
-        "\n     Foreground: ALL genes annotated to the GO term (org.Hs.eg.db GOALL),",
-        "\n     Background: all expressed genes (H01 genome-wide).",
-        "\n     Tests whether the biological process is intrinsically TREM2-driven",
-        "\n     independently of the DESeq filter. Each GO term shown once (deduplicated",
-        "\n     by ID); n_modules column records how many included modules contained it.",
-        "\n",
-        "\n   Setup B  -- within-filter (fair within-set comparison):",
-        "\n     Foreground: module genes annotated to the GO term (DESeq-filtered set),",
-        "\n     Background: all genes across included modules (DESeq-filtered set).",
-        "\n     Tests which processes stand out within the TREM2-associated gene set.",
-        "\n     Module x term combinations kept (module genes differ per module).",
-        "\n",
-        "\n   Included modules: M1 M5 M8 M11 M12 M14 M15 (astrocyte-relevant).",
-        "\n   Excluded: M0 (grey); M2 M3 M6 M7 (contamination);",
-        "\n             M4 M9 M10 M13 (no interpretable GO signature).",
+        "# Start LD_F04c: TREM2 variance per WGCNA GO term ", Sys.time(),
         "\n##########################################################################\n\n")
 
 library(qs)
@@ -37,6 +17,8 @@ dir.create(out_dir, showWarnings = FALSE)
 script_ind = "LD_F04c_v01_"
 prim_var   = "TREM2Variant"
 
+# Retain modules with interpretable astrocyte-related GO signatures; exclude
+# grey and contamination-associated modules.
 mods_include = c("M1","M5","M8","M11","M12","M14","M15")
 
 
@@ -206,7 +188,7 @@ message(sprintf("   Setup B: %d module x term combinations tested\n", nrow(res_B
 top_n      = 30   # ranked dotplot
 top_n_dist = 10   # violin/distribution plot
 
-# ── Setup A: ranked dotplot ──────────────────────────────────────────────────
+# Setup A: ranked dotplot
 
 pl_A = res_A %>%
   slice_head(n = top_n) %>%
@@ -235,7 +217,7 @@ print(p_A_dot)
 dev.off()
 
 
-# ── Setup A: Jaccard-deduplicated dotplot (gene-overlap-based, representative) ─
+# Setup A: Jaccard-deduplicated dotplot (gene-overlap-based, representative)
 #
 # Cluster GO terms by pairwise Jaccard on their genome-wide annotated gene sets.
 # Within each cluster keep the term with the highest median TREM2 variance.
@@ -316,7 +298,7 @@ print(p_A_jac)
 dev.off()
 
 
-# ── Setup B: ranked dotplot ──────────────────────────────────────────────────
+# Setup B: ranked dotplot
 
 pl_B = res_B %>%
   slice_head(n = top_n) %>%
@@ -340,7 +322,7 @@ print(p_B_dot)
 dev.off()
 
 
-# ── Setup A: distribution (violin + box) top 10 terms vs genome-wide ────────
+# Setup A: distribution (violin + box) top 10 terms vs genome-wide
 
 top_ids_A   = head(res_A$ID, top_n_dist)
 top_desc_A  = res_A$Description[match(top_ids_A, res_A$ID)]
@@ -375,7 +357,7 @@ print(p_A_dist)
 dev.off()
 
 
-# ── Setup A: distribution top 10 Jaccard-deduplicated (Jaccard >= 0.5) ───────
+# Setup A: distribution top 10 Jaccard-deduplicated (Jaccard >= 0.5)
 
 top_ids_A_jac  = head(res_A$ID[res_A$ID %in% rep_ids_jaccard], top_n_dist)
 top_desc_A_jac = res_A$Description[match(top_ids_A_jac, res_A$ID)]
@@ -409,7 +391,7 @@ print(p_A_jac_dist)
 dev.off()
 
 
-# ── Setup B: distribution (violin + box) top 10 terms vs module background ──
+# Setup B: distribution (violin + box) top 10 terms vs module background
 
 top_keys_B  = head(res_B$key, top_n_dist)
 top_desc_B  = res_B$Description[match(top_keys_B, res_B$key)]

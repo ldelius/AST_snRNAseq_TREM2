@@ -1,14 +1,7 @@
-# this file takes the scflow pipwlinw outputs and assembles them into a single Seurat object. saved as B01_seur.qs
-
 message("\n\n##########################################################################\n",
-        "# Start B01: Load sce dataset from scflow into Seurat ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Load metadata, create basic plot, \n",
+        "# Start LD_B01: Load scFlow dataset into Seurat ", Sys.time(),
         "\n##########################################################################\n\n")
-# this just prints a message when the script starts including a timestamp
 
-
-#set environment/load packages
 library(qs)
 library(tidyverse)
 library(Seurat) # main single cell analysis framework
@@ -226,4 +219,3 @@ message("\n\n###################################################################
         "# Completed B01 ", Sys.time(),
         "\n##########################################################################\n",
         "\n##########################################################################\n\n\n")
-

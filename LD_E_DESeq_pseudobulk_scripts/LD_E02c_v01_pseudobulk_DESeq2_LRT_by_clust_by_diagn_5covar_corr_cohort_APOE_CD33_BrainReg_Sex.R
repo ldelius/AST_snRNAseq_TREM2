@@ -1,46 +1,9 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_E02c Pseudobulk DESeq2 analysis (5-COVARIATE version): ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   LRT test by cluster, correcting for 5 covariates:",
-        "\n     cohort + APOEgroup + CD33Group + BrainRegion + Sex",
+        "# Start LD_E02c: Five-covariate pseudobulk DESeq2 analysis ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# =============================================================================
-# LD_E02c  -  5-COVARIATE re-run of the LD_E02a2 pseudobulk DESeq2 pipeline
-# -----------------------------------------------------------------------------
-# WHAT IS DIFFERENT FROM LD_E02a2:
-#   LD_E02a2 corrected DEG models for 3 covariates inside the DESeq design
-#   (APOEgroup + CD33Group + BrainRegion; cohort was only used for VST correction).
-#   THIS script corrects for FIVE covariates everywhere (VST correction AND the
-#   DESeq2 design formulas):
-#         cohort + APOEgroup + CD33Group + BrainRegion + Sex
-#   i.e. it adds cohort and Sex to the adjustment set.
-#
-#   Purpose: test whether the astrocyte DEG results are robust to a stricter,
-#   more complete covariate-adjustment model before deciding which covariate
-#   set to carry forward into the GSEA / GO analyses.
-#
-# EVERYTHING ELSE IS UNCHANGED relative to LD_E02a2:
-#   - same input pseudobulk object (LD_E01_v02_bulk_data.qs)
-#   - same 5 comparisons (cluster-vs-ref CV-only; AD-vs-Control CV-only;
-#     R62H-vs-CV AD-only; R47H-vs-CV AD-only; R47H-vs-R62H AD-only)
-#   - same loose DEG threshold (padj < 0.1, no log2FC cutoff)
-#   - same collinearity / single-level / sample-size safeguards that drop
-#     unusable covariates or omit clusters that cannot support the model
-#   - same plots (PCA uncorrected + corrected, DEG-count bar chart, top-3000
-#     variable-gene heatmap, combined-DEG heatmap, volcano plots)
-#
-# NEW OUTPUTS ADDED HERE (on top of all the LD_E02a2 outputs):
-#   - a CSV summary table: per-subcluster up/down DEG counts per comparison,
-#     pooled (union) totals per comparison, up:down ratio, and the number +
-#     proportion of transcription factors (Fantom5) among the DEGs
-#   - a 2-panel up/down DEG-count bar plot (AD-vs-Control + R62H-vs-CV stacked
-#     with independent / free y-axes), TFs coloured separately
-#
-# All outputs are written to a dedicated sub-folder: <out_dir>/LD_E02c/
-# =============================================================================
-
-# Open packages necessary for analysis.
+# Adds cohort and Sex to both the E02a2 VST correction and DESeq2 design to
+# test robustness to expanded adjustment.
 library(qs)
 library(tidyverse)
 library(AnnotationDbi)

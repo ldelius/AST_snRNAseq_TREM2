@@ -1,13 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start G01b: Merge AST and MIC labelled Seurat objects ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Loads the labelled AST Seurat (LD_B04a_v02) and Michael's labelled MIC Seurat (B04),\n",
-        "   into a single object, runs NormalizeData() on the merged RNA assay, and saves \n",
-        "   for downstream CellChat analysis (G02).\n",
+        "# Start LD_G01b: Merge AST and MIC Seurat objects ", Sys.time(),
         "\n##########################################################################\n\n")
 
-
-#set environment/load packages
 library(qs)
 library(tidyverse)
 library(Seurat)

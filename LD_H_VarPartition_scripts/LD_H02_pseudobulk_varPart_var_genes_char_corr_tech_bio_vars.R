@@ -1,38 +1,9 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_H02 Pseudobulk variancePartition variable-gene analysis: ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Characterise genes whose variance is driven by the primary variable",
-        "\n   (TREM2Variant), build a covariate-corrected vst matrix, plot heatmaps,",
-        "\n   and run GO-BP over-representation on the variable-gene sets",
+        "# Start LD_H02: Variance-driven gene characterisation ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# what this script does (adapted from Michael's G03a3 microglia varPart script):
-# - builds on LD_H01 output (LD_H01_v01_bulk_data.qs), NOT raw pseudobulk
-# - ranks genes by fraction of variance explained by the primary variable and
-#   extracts variable-gene sets at several thresholds (0.05/0.10/0.15/0.20)
-# - flags transcription factors (TFs) among the variable genes (Fantom5 panel)
-# - builds a covariate-CORRECTED vst matrix by regressing out all H01
-#   candidate_covars with a linear mixed model (fitVarPartModel residuals)
-# - plots Z-score heatmaps of variable genes (uncorrected + corrected)
-# - runs GO-BP over-representation per variable-gene set + dotplot/network plots
-#
-# changes from Michael's G03a3 (his choices in brackets):
-# - single primary variable TREM2Variant   [Michael: 2 prim vars APOEgroup + TREM2Variant]
-#     -> his prim_vars[1]-vs-prim_vars[2] scatter is replaced by a ranked
-#        variance-explained plot for the single primary variable
-#     -> his variable-gene loop dropped the prim_var1/prim_var2 intersection
-# - correction formula regresses out ALL H01 candidate_covars (built
-#   programmatically), i.e. everything except TREM2Variant. This includes the
-#   two covariates Michael's data lacked: BrainRegion and pctPHF1PositiveArea.
-#   Michael's form_corr (for reference) was:
-#     ~ (1|cohort) + PMI_scaled + RNA_counts_scaled + (1|cluster_name) +
-#       (1|Braak) + pctAT8PositiveArea + pct4G8PositiveArea + plaque_dens_scaled +
-#       Age_scaled + (1|Sex) + (1|CD33Group) + (1|APOEgroup)
-# - fixed Michael's bug reading bulk_data$varPart$var_genes (should be
-#   bulk_data$varPart_analysis$var_genes) for the TF table
-# - LD paths / out_dir / script_ind ("LD_H02_v01_") and file-naming style
-
-# Open packages necessary for analysis.
+# TREM2Variant is the single primary variable; the other H01 covariates are
+# removed from the corrected matrix.
 library(qs)
 library(tidyverse)
 library(AnnotationDbi)
@@ -72,31 +43,10 @@ bulk_data = qread(file = paste0(out_dir, "LD_H01_v01_bulk_data.qs"))
 var_thresholds = c(0.05, 0.10, 0.15, 0.20)
 
 ### define formula for covariate correction of the vst matrix (linear mixed model)
-# regress out all measured technical + biological covariates, keeping ONLY the
-# primary variable (TREM2Variant) - so the corrected matrix shows expression
-# variation NOT attributable to these covariates.
-# HYBRID random/fixed specification (rule: >=5 well-populated levels -> random,
-# otherwise fixed):
-#  - random: cluster_name (many clusters), Braak (5 well-populated stages: III-VI)
-#  - fixed : cohort, BrainRegion, Sex, CD33Group, APOEgroup (all 2-level - a variance
-#            cannot be estimated from 2 groups, so as random these collapse to
-#            singular fits and are barely subtracted; fixed removes them fully,
-#            which matters for APOE in particular). Same df as random for 2-level.
-#  - fixed : all numeric covariates
-# NB: H01's variance-partition model keeps everything random (correct for
-# DECOMPOSING variance); fixed-vs-random only matters here because H02 REMOVES it.
-# Why this is consistent with the literature, not a contradiction of H01:
-#  - variancePartition recommends categorical -> random, but ONLY for the variance
-#    decomposition step (H01). It is a diagnostic tool and gives NO recommendation
-#    for building a corrected matrix for downstream analysis (e.g. WGCNA); its
-#    "remove batch effects" section points to limma::removeBatchEffect instead.
-#  - The standard tools that DO make a covariate-corrected matrix for WGCNA are all
-#    fixed-effect linear models: limma::removeBatchEffect and WGCNA::empiricalBayesLM
-#    (Langfelder/Horvath's own recommended adjustment). So leaning fixed for the
-#    correction step is the mainstream convention; a pure all-random correction
-#    would be the LEAST conventional choice for a WGCNA input matrix.
-#  - Hence: H01 (decompose) = all random per variancePartition; H02 (correct for
-#    WGCNA) = hybrid leaning fixed, per downstream-correction convention.
+# Use random effects for cluster_name and Braak. Two-level categorical and
+# numeric covariates are fixed because random effects for two-level factors
+# produced singular fits and incomplete removal. H01 uses random effects for
+# variance decomposition; this model constructs a covariate-corrected matrix.
 form_corr = ~ (1 | cluster_name) + (1 | Braak) +
   cohort + BrainRegion + Sex + CD33Group + APOEgroup +
   PMI_scaled + RNA_counts_scaled + Age_scaled + plaque_dens_scaled +

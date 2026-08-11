@@ -1,37 +1,12 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_F02c Pseudobulk DESeq2 analysis (7-covariate, both variants): ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Combined-across-clusters LRT + group-protected 7-covariate corrected vst matrix",
-        "\n   to seed the unbiased WGCNA (LD_F03c). AD-only, both risk variants (R62H + R47H).",
+        "# Start LD_F02c: Seven-covariate pseudobulk DESeq2 analysis ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# what this script does (adapted from LD_F02a1; 7-covariate = GSEA 5 + 2 technical):
-# - loads the AST pseudobulk object (LD_F01_v02_bulk_data.qs)
-# - removes Control samples (AD-only), keeps BOTH risk variants (R62H + R47H)
-# - runs ONE combined-across-clusters DESeq2 LRT testing TREM2Variant, correcting for SEVEN
-#   covariates: the 5 GSEA covariates (cohort, APOEgroup, CD33Group, BrainRegion, Sex) PLUS
-#   2 technical covariates (PostMortemInterval, log10_nCount_RNA) (+ cluster_name in the design)
-# - builds a GROUP-PROTECTED 7-covariate-corrected vst matrix (removeBatchEffect with
-#   group = group, so the variant biology is preserved while the 7 covariates are removed)
-# - stores DEGs (nominal p<0.05) for an OPTIONAL variant-seeded supplementary network (B);
-#   the PRIMARY analysis (F03c, strategy A) instead seeds WGCNA on all/top-variable genes
-# - plots PCA (uncorrected + corrected), DEG-count CSV, top-3000-variable + DEG heatmaps
-#
-# changes from LD_F02a1:
-#  1. covariates = the 5 GSEA covariates + the 2 technical covariates of F02a1 (added Sex vs
-#     F02a1; re-added PMI + log10_nCount_RNA after the FIRST (5-covar) WGCNA run - see #4)
-#  2. design AND matrix correction use the SAME 7-covariate set: covariates appear in BOTH
-#     because the design controls the DEG TEST while the correction cleans the WGCNA MATRIX
-#     (vst() does not remove covariate effects from the values); correction stays group-protected
-#  3. both risk variants kept (as in F02a1, despite F02a1's R62H-only name)
-#  4. TECHNICAL-COVARIATE JUSTIFICATION (2026-06-24): the first WGCNA run on the 5-covar matrix
-#     showed module-trait associations driven by PMI (M7 r=0.36, M10 -0.34, M14 -0.31) and
-#     library size (M4 r=0.42, M19 0.38). WGCNA's co-expression module detection can manufacture
-#     spurious modules from coordinated technical variation (unlike per-gene GSEA), so PMI +
-#     log10 library size are regressed out. log10_nCount_RNA (not raw counts) matches F02a1 and
-#     stabilises scale. NB the script FILENAME still says "5covar" (cosmetic/legacy) - it is 7-covar.
-
-# Open packages necessary for analysis.
+# The same covariates are used in the DESeq2 design and VST correction: the
+# design controls the DEG test, while group-protected correction removes
+# technical effects from the WGCNA matrix without removing variant effects.
+# PMI and log10 library size are included because the initial five-covariate
+# WGCNA showed module associations with both technical factors.
 library(qs)
 library(tidyverse)
 library(AnnotationDbi)

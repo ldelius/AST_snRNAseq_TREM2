@@ -1,31 +1,9 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_H03: variable-gene WGCNA characterisation", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   WGCNA on the corrected vst matrix (TREM2-driven variable genes, thr 0.05)",
-        "\n   modules -> activity -> covariate/group association -> GO characterisation",
+        "# Start LD_H03: Variable-gene WGCNA characterisation ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# what this script does (adapted from Michael's G04a31 microglia WGCNA script):
-# - builds on LD_H02 output (LD_H02_v02_bulk_data.qs, hybrid-corrected)
-# - v03: WGCNA soft-power step aligned to my F03a1/F03a2 scripts (was v02)
-# - runs WGCNA on the TREM2-driven variable genes (thr 0.05) using the
-#   covariate-CORRECTED vst matrix from H02 (vst_mat_corr)
-# - extracts modules, module activity scores, module-covariate associations,
-#   module-vs-group plots, and per-module + combined GO-BP characterisation
-#
-# DATA-WIRING / NAMING changes only - WGCNA logic + parameters kept as Michael's,
-# EXCEPT the soft-thresholding power, which is chosen data-driven from MY fit:
-#  - paths/naming -> mine; script_ind "LD_H03_v03_"
-#  - input -> LD_H02_v02_bulk_data.qs (not G03a3_bulk_data.qs)
-#  - marker subtype filter -> "Astrocyte_subtypes" (Michael: "Microglia_subtypes")
-#  - GOI / TF / marker tables still read from data_TREM2_michael/A_input (my convention,
-#    same as my LD_F03a2 script)
-#  - soft power: chosen EXACTLY as in my F03a1/F03a2 scripts (unsigned
-#    pickSoftThreshold; first power with signed R^2 > 0.8, floored at 6) so the
-#    WGCNA construction matches F for a clean F-vs-H comparison; see below
-#  - added runtime confirmation block (gene-set name/size, vst_mat_corr slot)
-
-# Open packages necessary for analysis.
+# Soft-threshold selection matches F03 (first power with signed R^2 > 0.8,
+# floored at 6) to keep network construction comparable.
 library(qs)
 library(tidyverse)
 library(DESeq2)
@@ -62,7 +40,7 @@ bulk_data = qread(file = paste0(out_dir,"LD_H02_v02_bulk_data.qs"))
 
 
 #######################################
-# confirm required H02 slots + gene set (points 3 & 4 of the brief)
+# confirm required H02 slots + gene set
 #######################################
 
 message("\n   var_genes sets available in H02 output:")

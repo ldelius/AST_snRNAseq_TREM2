@@ -1,17 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_F02a1 Pseudobulk DESeq2 analysis: ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   LRT test by cluster with correction for covariates",
+        "# Start LD_F02a1: Pseudobulk DESeq2 analysis ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# what this script does:
-# - runs DESeq2 LRT test by cluster with correction for covariates (cohort, BrainRegion, APOEgroup, CD33Group)
-# - extracts DESeq2 results and DEGs
-# - calculates vst norm expression matrix (based on all clusters combined), corrects for covariates and calculates gene z-scores
-# - plots PCA of samples by cluster based on uncorrected and corrected vst matrix
-# - plots heatmap of top 3000 variable genes and DEGs by cluster_sample based on vst matrix corrected for covariates  
-
-# Open packages necessary for analysis.
 library(qs)
 library(tidyverse)
 library(AnnotationDbi)
@@ -507,5 +497,3 @@ message("\n\n###################################################################
         "# Completed F02 ", Sys.time(),
         "\n##########################################################################\n",
         "\n##########################################################################\n\n\n")
-
-

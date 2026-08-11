@@ -1,10 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start C03: subcluster characterisation ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   ",
+        "# Start LD_B04a: Astrocyte subcluster characterisation ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# Open packages necessary for analysis.
 library(qs)
 library(tidyverse)
 library(Signac) # Seurat extension for chromatin accessibility data (not called in this file)
@@ -1282,5 +1279,3 @@ message("\n\n###################################################################
         "# Completed C03 ", Sys.time(),
         "\n##########################################################################\n",
         "\n##########################################################################\n\n\n")
-
-

@@ -1,17 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start G02a: CellChat ungrouped (one CellChat across all cells) ", Sys.time(),
-        "\n##########################################################################\n",
-        "     LD_G02a - ungrouped (this script)\n",
-        "     LD_G02b - TREM2Variant (CV / R47H / R62H)\n",
-        "     LD_G02c - TREM2Variant x NeuropathologicalDiagnosis (6 splits)\n",
-        "\n   Parameters: assay='RNA' (LogNormalize from G01b), type='triMean', nboot=100,\n",
-        "   filterCommunication(min.cells = 10) post-hoc, cluster_sample cap of 200,\n",
-        "   required because full data caused computeCommunProb OOM\n",
-        "   at 500 GB).\n",
+        "# Start LD_G02a: Ungrouped CellChat analysis ", Sys.time(),
         "\n##########################################################################\n\n")
 
-
-#set environment/load packages
 library(qs)
 library(tidyverse)
 library(Seurat)

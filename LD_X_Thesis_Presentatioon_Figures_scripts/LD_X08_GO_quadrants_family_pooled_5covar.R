@@ -1,29 +1,6 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_X08: GO-BP per quadrant, pooled per astrocyte family (5-covariate) ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   For each astrocyte family (AST_SLC1A2, AST_GFAP, AST_CHI3L1) and each",
-        "\n   pairwise contrast comparison (matching LD_X07 Part B), classify reg_both",
-        "\n   genes per subcluster into the four quadrants (up_up, down_down, up_down,",
-        "\n   down_up), POOL (union) the quadrant gene sets across the subclusters",
-        "\n   belonging to that family, and run GO biological-process over-representation",
-        "\n   on each pooled quadrant gene set. One GO dotplot per family (3 total).",
+        "# Start LD_X08: Pooled astrocyte-family GO analysis ", Sys.time(),
         "\n##########################################################################\n\n")
-
-# WHAT THIS SCRIPT DOES
-# ---------------------------------------------------------------------------
-# Same GO-per-quadrant logic as LD_E04b_v01_GO_quadrants_log2FC_corr.R (nominal
-# p < 0.05 quadrant classification, restricted to the DEG-union foreground pool,
-# enrichGO BP with the expressed-gene background universe, top 10 terms per
-# quadrant by padj), but:
-#   - built on the 5-covariate model (LD_E02c, basic model only - no incremental
-#     covariate ladder, matching LD_X07 Part B3's per-subcluster results)
-#   - instead of per-subcluster scopes, genes are POOLED (union) across all
-#     subclusters within one astrocyte family (SLC1A2 / GFAP / CHI3L1), using
-#     the cluster_name -> cell_type mapping in LD_B03a_cluster_assignment.csv.
-#     This mirrors the union-across-subclusters convention already used for
-#     "pooled" DEG stats in LD_X07 Part A (pooled_stats()).
-#   - pairs = the same 3 contrast pairs as LD_X07 Part B (R62H_vs_CV, R47H_vs_CV,
-#     CV_AD_vs_Control), no AD-vs-Control-only pair duplication.
 
 library(tidyverse)
 library(qs)

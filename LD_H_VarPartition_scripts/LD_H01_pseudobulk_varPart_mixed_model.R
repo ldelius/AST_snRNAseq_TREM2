@@ -1,30 +1,10 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_H01 Pseudobulk variancePartition analysis: ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Quantify variance explained by candidate covariates (mixed model)",
-        "\n   to decide which covariates to correct for in AST pseudobulk DEG analyses",
+        "# Start LD_H01: Pseudobulk variance partitioning ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# what this script does (adapted from Michael's G02a1 microglia varPart script):
-# - loads the AST pseudobulk object (LD_F01_v02_bulk_data.qs)
-# - matches Michael's sample selection: removes Controls, keeps all TREM2 variants
-# - fits a variancePartition model with fitExtractVarPartModel:
-#     categorical covariates as random effects (1|x), numeric covariates as fixed
-# - runs canCorPairs collinearity check, writes correlation matrix + plot
-# - writes per-gene variance CSV and the plotVarPart variance-explained plot
-# change from michaels script: I did not use ApoE as primary_var (only TREM2)
-# changes:
-#  1. added N_cells_scaled as a fixed-effect covariate (technical, not removed by VST size factors)
-#  2. dropped RNA_counts_scaled: 0.944 collinear with N_cells & redundant with VST size factors;
-#     keeping both split/inflated the technical variance and washed out pathology in the canCorPairs plot
-#  3. (intermediate) had bumped output index to v02 during the N_cells experiment
-#  4. FINAL: reverted to original technical-covariate set - removed N_cells_scaled (0.782 collinear
-#     with cluster_name, already modelled) and kept RNA_counts_scaled (pathology stays visible in
-#     canCorPairs). This RNA-only result is the version stored in the v02 outputs (final, in use).
-#     NB: N_cells/RNA are NOT used in the WGCNA correction (that is the 5 GSEA covariates) -
-#     this only affects the H01 varPart diagnostic/figure.
-
-# Open packages necessary for analysis.
+# The final model excludes N_cells_scaled because it is collinear with
+# cluster_name, and retains RNA_counts_scaled because pathology remains visible
+# in the collinearity diagnostic. This affects only the H01 diagnostic.
 library(qs)
 library(tidyverse)
 library(Seurat)

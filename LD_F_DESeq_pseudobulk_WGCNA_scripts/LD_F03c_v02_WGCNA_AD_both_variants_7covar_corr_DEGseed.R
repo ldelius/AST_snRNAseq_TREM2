@@ -1,15 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_F03c v02: WGCNA (variant-DEG-seeded, DESCRIPTIVE): ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Variant-seeded twin of v01 (Strategy B): network seeded on the F02c TREM2 DEGs",
-        "\n   (LRT p<0.05) from the SAME AD-only 5-covariate corrected matrix. Describes how the",
-        "\n   variant response organises into co-expression modules + their functions (GO-BP).",
-        "\n   CIRCULAR for module-variant stats (genes pre-selected on TREM2): module-trait /",
-        "\n   LMM are kept but read DESCRIPTIVELY only; the inferential 'which modules up/down",
-        "\n   in the variants, with stats' question is answered by v01 (all-genes).",
+        "# Start LD_F03c: DEG-seeded WGCNA ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# Open packages necessary for analysis.
 library(qs)
 library(tidyverse)
 library(DESeq2)
@@ -1723,5 +1715,3 @@ message("\n\n###################################################################
         "# Completed LD_F03c ", Sys.time(),
         "\n##########################################################################\n",
         "\n##########################################################################\n\n\n")
-
-

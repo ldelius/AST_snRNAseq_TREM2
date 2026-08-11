@@ -1,24 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start G03a: CellChat per-run visualisation - ungrouped ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Loads the ungrouped CellChat object from G02a and produces per-run\n",
-        "   visualisations:\n",
-        "     - aggregated network circle plots (count + weight)\n",
-        "     - interaction heatmaps (count + weight)\n",
-        "     - signalling-role heatmaps (full clusters + MIC->AST pathways)\n",
-        "     - signalling-role scatter (2D senders vs receivers)\n",
-        "     - per-pathway plots looped over MIC->AST relevant pathways\n",
-        "         (chord, role network heatmap, gene expression violin)\n",
-        "     - MIC->AST L-R interaction table\n",
-        "     - MIC->AST L-R bubble plot (CellChat-native + custom ggplot)\n",
-        "     - pathway-gene Z-score heatmaps (uses G01a merged pseudobulk)\n",
-        "\n   Single CellChat object - no across-run comparisons possible.\n",
-        "   computeCommunProbPathway() and aggregateNet() were already run in G02a;\n",
-        "   netAnalysis_computeCentrality() runs here (G02a skipped it).\n",
+        "# Start LD_G03a: Ungrouped CellChat visualisation ", Sys.time(),
         "\n##########################################################################\n\n")
 
-
-#set environment/load packages
 library(qs)
 library(tidyverse)
 library(CellChat)

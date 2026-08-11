@@ -1,15 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start G02b: CellChat by TREM2Variant ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   LD_G02a - ungrouped\n",
-        "     LD_G02b - TREM2Variant (CV / R47H / R62H) (this script)\n",
-        "     LD_G02c - TREM2Variant x NeuropathologicalDiagnosis (6 splits)\n",
-        "\n   Parameters: assay='RNA' (LogNormalize from G01b), type='triMean', nboot=100,\n",
-        "   filterCommunication(min.cells = 10) post-hoc, cluster_sample cap of 200.\n",
+        "# Start LD_G02b: CellChat analysis by TREM2 variant ", Sys.time(),
         "\n##########################################################################\n\n")
 
-
-#set environment/load packages
 library(qs)
 library(tidyverse)
 library(Seurat)
