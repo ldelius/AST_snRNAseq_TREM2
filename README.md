@@ -23,8 +23,7 @@ Input data, intermediate analysis objects, and generated results are not include
   - [`LD_B01_v010_load_from_scflow_TREM2_cohort_enriched.R`](LD_B_AST_analysis_scripts/LD_B01_v010_load_from_scflow_TREM2_cohort_enriched.R)
 
 - **Astrocyte subsetting, integration, and first-round clustering**
-  - Main analysis: [`LD_B02a_v010_subset_reintegrate_reclustering_tests_AST_round1.R`](LD_B_AST_analysis_scripts/LD_B02a_v010_subset_reintegrate_reclustering_tests_AST_round1.R)
-  - Plotting rerun from the saved B02 object: [`LD_B02a_rerun_plotting_v010_AST_round1.R`](LD_B_AST_analysis_scripts/LD_B02a_rerun_plotting_v010_AST_round1.R)
+  - [`LD_B02a_v010_subset_reintegrate_reclustering_tests_AST_round1.R`](LD_B_AST_analysis_scripts/LD_B02a_v010_subset_reintegrate_reclustering_tests_AST_round1.R)
 
 - **Second-round astrocyte subclustering**
   - [`LD_B03a_v010_subset_reintegrate_reclustering_tests_AST_round2.R`](LD_B_AST_analysis_scripts/LD_B03a_v010_subset_reintegrate_reclustering_tests_AST_round2.R)
