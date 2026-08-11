@@ -1,46 +1,10 @@
 message("\n\n##########################################################################\n",
         "# Start LD_X09: Hallmark interferon alpha/gamma dotplots ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   For each of 3 TREM2 contrasts (R62H_vs_CV, R47H_vs_CV, R47H_vs_R62H),",
-        "\n   plot HALLMARK_INTERFERON_ALPHA_RESPONSE / GAMMA_RESPONSE / union genes",
-        "\n   as a colour+size dotplot (log2FoldChange x -log10 padj), no significance",
-        "\n   or effect-size filtering. Two scopes: per-subcluster (E02c, 5-covariate)",
-        "\n   and pooled (E04c, 5-covariate, M0_base). 3 gene sets x 2 scopes = 6 figures.",
         "\n##########################################################################\n\n")
 
-# WHAT THIS SCRIPT DOES
-# ---------------------------------------------------------------------------
-# GENE SETS: HALLMARK_INTERFERON_ALPHA_RESPONSE and _GAMMA_RESPONSE (msigdbr,
-# species "Homo sapiens", collection "H"). Three plotting sets per scope:
-#   set_alpha      = alpha_set
-#   set_all        = union(alpha_set, gamma_set)
-#   set_gamma_only = setdiff(gamma_set, alpha_set)
-# Each restricted to genes actually tested in that scope's DESeq2 results (no
-# padj/log2FC threshold applied to what gets plotted).
-#
-# CONTRASTS (already fit directly by DESeq2, not derived by subtraction):
-#   R62H_vs_CV, R47H_vs_CV, R47H_vs_R62H (R62H is the reference level for the
-#   third contrast, i.e. positive log2FC = up in R47H - kept as stored).
-#
-# SCOPES:
-#   per-subcluster: LD_E02c per-cluster DESeq2 results (SLC1A2/GFAP/CHI3L1
-#     subclusters on the x-axis, faceted by contrast)
-#   pooled: LD_E04c single all-astrocyte model, M0_base level (contrast
-#     directly on the x-axis, one panel, no facet)
-#
-# GENE ORDERING: fixed once per scope from the R62H_vs_CV contrast (median
-# log2FoldChange across clusters for per-subcluster; the single pooled value
-# for pooled), over set_all, descending, reversed so top-ranked sits at top.
-# Reused for all 3 gene-set figures within a scope.
-#
-# COLOUR/SIZE SCALE: computed once per scope (over set_all across all 3
-# contrasts) and applied identically to that scope's 3 figures. NOT shared
-# between the two scopes (per-subcluster values are noisier/wider-ranged).
-#
-# SIGNIFICANCE MARKER: black open-circle outline layer for padj < 0.05. No
-# additional "filtered/grey" case - rows with NA log2FoldChange/padj are
-# simply dropped from that panel.
-
+# R47H_vs_R62H uses R62H as reference, so positive log2FC indicates higher
+# expression in R47H. Colour and size scales are shared within each scope but
+# not across scopes because per-subcluster values have a wider range.
 library(tidyverse)
 library(qs)
 library(msigdbr)

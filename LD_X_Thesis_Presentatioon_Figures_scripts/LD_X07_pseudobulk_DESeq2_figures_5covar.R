@@ -1,36 +1,9 @@
-# LD_X07: Pseudobulk DESeq2 - DEG threshold sensitivity + pairwise log2FC comparisons.
-#
-#   PART 1 (decision table): DEG counts per comparison x astrocyte subcluster under
-#     four padj x |log2FC| cutoffs, to help choose a DEG threshold.
-#       Comparisons: AD vs Ctrl (CV), R62H vs CV (AD), R47H vs CV (AD).
-#       Threshold sets: padj < {0.05, 0.1} x |log2FC| > {0, 0.25}.
-#       Same DEG definition as LD_E02a2 (LRT padj + raw MLE log2FoldChange); no
-#       re-fit, no shrinkage. Reads LD_E02a2_v02_bulk_data.qs ($deseq_results).
-#       Scope = PER SUBCLUSTER (the only stored scope for E02a2).
-#
-#   PART 2 (thesis figures): pairwise log2FC concordance of DESeq2 contrasts, on the
-#     POOLED astrocyte pseudobulk (all subclusters, cluster_name as a covariate).
-#     Reads the pooled DESeq results checkpointed by LD_E04a ($E04_deseq_res).
-#       (2a) MAIN figure - three contrast pairs side by side (E03a2 scatter style,
-#            reg_both genes, base covariate model M0):
-#              R62H_vs_CV  ~ AD_vs_Ctrl ;  R47H_vs_CV ~ AD_vs_Ctrl ;  R62H_vs_CV ~ R47H_vs_CV
-#       (2b) SUPPLEMENTARY figure - the same three pairs as rows x covariate levels as
-#            columns (M0 -> +Sex -> +cohort -> +PMI -> +Age -> +Braak), showing the
-#            effect survives progressive covariate adjustment.
-#
-#   NB on thresholds in PART 2: the scatter is restricted to the E03 DEG-union gene
-#   universe (E02a2 DEGs, padj < 0.1) and genes are coloured "up"/"down"/"nreg" by
-#   NOMINAL p < 0.05 per contrast (classify_reg). This is a descriptive effect-direction
-#   concordance plot, NOT an FDR-significant DEG plot - matches E03a2/E04a exactly.
-#
-#   DATA: LD_E_DESeq_pseudobulk/LD_E02a2_v02_bulk_data.qs        (Part 1; ~3.4 GB)
-#         LD_E_DESeq_pseudobulk/LD_E04a_v01_bulk_data.qs         (Part 2; pooled results)
-#         LD_E_DESeq_pseudobulk/LD_E02a2_v02_DEGs_by_cluster_genes.csv (Part 2; gene universe)
-
 message("\n\n##########################################################################\n",
-        "# Start LD_X07 pseudobulk DESeq2 figures (5-covariate, E02c): ", Sys.time(),
+        "# Start LD_X07: Five-covariate pseudobulk DESeq2 figures ", Sys.time(),
         "\n##########################################################################\n\n")
 
+# Concordance plots use the E03 DEG union and nominal p < 0.05 for direction
+# classification; they are descriptive rather than FDR-significant DEG plots.
 library(tidyverse)
 library(qs)
 library(ggrepel)
@@ -51,9 +24,7 @@ script_ind = "LD_X07_"
 e02c_deg_genes_csv = file.path(e_out, "LD_E02c/LD_E02c_v01_DEGs_by_cluster_genes.csv")
 tf_csv             = file.path(base, "data_TREM2_michael/A_input/Transcription Factors hg19 - Fantom5_21-12-21.csv")
 
-# Legacy Part 1 (threshold sensitivity, E02a2) and Part 2 (concordance, E04a) still read the
-# OLD 3-covariate data, so they are disabled for now. Part 2 will be rebuilt on the 5-covariate
-# data next; set RUN_LEGACY = TRUE only to reproduce the old figures.
+# Disabled because the legacy sections use the old three-covariate inputs.
 RUN_LEGACY = FALSE
 
 save_plot = function(p, suffix, w, h) {

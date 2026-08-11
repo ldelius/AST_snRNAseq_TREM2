@@ -1,18 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start G01a: Merge AST and MIC pseudobulk objects ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Loads the AST pseudobulk object (LD_F03a1_v02_bulk_data.qs) and Michael's\n",
-        "   MIC equivalent (F03a1_bulk_data.qs), concatenates raw counts on shared\n",
-        "   genes, runs joint VST + sequential limma::removeBatchEffect for covariates\n",
-        "   (cohort, APOEgroup, CD33Group, BrainRegion), and computes per-gene Z-scores\n",
-        "   across all cluster_samples.\n",
-        "\n   Output is used by G03a/b/c pathway-gene heatmap sections to display ligand\n",
-        "   expression in MIC clusters and receptor expression in AST clusters in one\n",
-        "   heatmap, annotated by TREM2Variant x NeuropathologicalDiagnosis.\n",
+        "# Start LD_G01a: Merge AST and MIC pseudobulk objects ", Sys.time(),
         "\n##########################################################################\n\n")
 
-
-#set environment/load packages
 library(qs)
 library(tidyverse)
 library(DESeq2)

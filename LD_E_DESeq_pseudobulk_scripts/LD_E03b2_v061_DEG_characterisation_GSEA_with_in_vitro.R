@@ -1,13 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_E03b2: DEG characterisation - GSEA of astrocyte pseudobulk results", Sys.time(),
-        "\n##########################################################################\n",
+        "# Start LD_E03b2: Astrocyte pseudobulk GSEA ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# what this script does:
-## - runs GSEA on each DESeq2 comparison made in the previous script (Are whole groups of biologically related genes shifting together?)
-## - saves and plots GSEA results
-
-# Open packages necessary for analysis.
 library(qs)
 library(tidyverse)
 library(DESeq2)
@@ -529,5 +523,3 @@ message("\n\n###################################################################
         "# Completed LD_E03b2 ", Sys.time(),
         "\n##########################################################################\n",
         "\n##########################################################################\n\n\n")
-
-

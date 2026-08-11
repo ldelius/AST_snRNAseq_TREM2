@@ -1,23 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start G03c: CellChat per-run visualisation - by TREM2Variant x Diagnosis ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Loads the six CellChat objects from G02c (CV/R47H/R62H x Control/AD) and\n",
-        "   produces visualisations as G03a/b, with three additions:\n",
-        "     - MIC->AST-only signallingRole heatmap (custom, BH-FDR padj < cutoff)\n",
-        "     - MIC->AST-only per-pathway chord (custom, side-by-side comparison\n",
-        "       of raw pval and BH-FDR padj filtering, so reader sees what's lost\n",
-        "       to FDR correction)\n",
-        "     - Custom violin plots per (pathway, gene) split by group, pulling\n",
-        "       expression directly from G01b merged Seurat (avoids ggplot2 4.0+\n",
-        "       S4SXP deparse errors in CellChat's plotGeneExpression). Ligands\n",
-        "       shown only in MIC clusters; receptors only in AST clusters.\n",
-        "\n   IMPORTANT - small-group caveat: groups with very few donors (R47H_Control,\n",
-        "   R62H_Control) will produce noisy CellChat output. Significance-thresholded\n",
-        "   results from these groups should be interpreted with caution.\n",
+        "# Start LD_G03c: CellChat visualisation by TREM2 variant and diagnosis ", Sys.time(),
         "\n##########################################################################\n\n")
 
-
-#set environment/load packages
 library(qs)
 library(tidyverse)
 library(CellChat)
@@ -43,6 +27,7 @@ if (!dir.exists(out_dir)){dir.create(out_dir, recursive = TRUE)}
 
 
 #input CellChat objects (G02c output)
+# Control variant groups have few donors; interpret thresholded results cautiously.
 group_levels = c("CV_Control", "R47H_Control", "R62H_Control",
                  "CV_AD",      "R47H_AD",      "R62H_AD")
 in_cellchat = setNames(

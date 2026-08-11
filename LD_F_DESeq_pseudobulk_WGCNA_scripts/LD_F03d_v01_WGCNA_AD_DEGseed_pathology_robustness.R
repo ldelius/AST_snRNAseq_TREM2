@@ -1,22 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_F03d v01: WGCNA pathology robustness (DEG-seeded): ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Supplementary pathology robustness check on the F03c v02 DEG-seeded network.",
-        "\n   Loads the same F02c 7-covar group-protected corrected matrix, then applies a",
-        "\n   further group-protected removeBatchEffect for two pathology correction models:",
-        "\n     Model A: Age + Braak_numeric",
-        "\n     Model B: Age + Braak_numeric + plaque_dens + pctAT8 + pctPHF1 + pct4G8",
-        "\n   The full WGCNA pipeline (network, modules, GO-BP, LMM) is run independently",
-        "\n   for each model. Outputs are saved to ModelA/ and ModelB/ subdirectories.",
-        "\n   NAs in pathology covariates are imputed with column means prior to correction.",
-        "\n   Omitted outputs vs F03c v02: gene-expression heatmaps (GO-gene, GOI, subtype",
-        "\n   markers), GO network plot, eigengene-vs-covars scatter, plaque scatter.",
-        "\n   CIRCULAR for module-variant stats (DEG-seeded): LMM / trait results are",
-        "\n   descriptive only, consistent with F03c v02.",
+        "# Start LD_F03d: WGCNA pathology robustness analysis ", Sys.time(),
         "\n##########################################################################\n\n")
 
-
-# Open packages necessary for analysis.
 library(qs)
 library(tidyverse)
 library(limma)
@@ -781,6 +766,8 @@ for (model_name in names(path_models)){
   ######################################################################
   ### Across-cluster LMM per module (TREM2Variant effect)
   ######################################################################
+
+  # Variant associations are descriptive because modules are seeded on TREM2 DEGs.
 
   message("\n\n          *** Across-cluster LMM per module (TREM2Variant) - ", Sys.time(), "\n\n")
 

@@ -1,29 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start G03d: pairwise CellChat comparisons in AD ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Loads three CellChat objects from G02c (CV_AD, R47H_AD, R62H_AD) and runs\n",
-        "   three pairwise comparisons using CellChat's mergeCellChat framework:\n",
-        "     - CV_AD   vs R47H_AD\n",
-        "     - CV_AD   vs R62H_AD\n",
-        "     - R47H_AD vs R62H_AD\n",
-        "\n   Per pair, output:\n",
-        "     - compareInteractions barplot (total count + weight per group)\n",
-        "     - netVisual_diffInteraction circle plot (red = up in 2nd group)\n",
-        "     - netVisual_heatmap differential heatmap\n",
-        "     - rankNet pathway-level differential information flow (with p-values)\n",
-        "     - rankNet plus stat barplot for stacked + side-by-side views\n",
-        "     - bubble plot of MIC->AST L-Rs differentially expressed between groups\n",
-        "\n   IMPORTANT - small N caveats:\n",
-        "     - CV_AD   n=41 donors\n",
-        "     - R47H_AD n=8  donors  (low; descriptive only)\n",
-        "     - R62H_AD n=20 donors\n",
-        "   Pairwise tests involving R47H_AD have limited power. Differences should be\n",
-        "   reported with explicit n-stratified caveats. Skipped: comparisons involving\n",
-        "   R47H_Control (n=2) and R62H_Control (n=8) - underpowered.\n",
+        "# Start LD_G03d: Pairwise CellChat comparisons in AD ", Sys.time(),
         "\n##########################################################################\n\n")
 
-
-#set environment/load packages
 library(qs)
 library(tidyverse)
 library(CellChat)
@@ -52,6 +30,7 @@ in_cellchat = setNames(
 
 ### pairwise comparisons (always (variant of interest) vs CV as reference,
 ### R47H vs R62H added as exploratory)
+# R47H_AD has 8 donors, so comparisons involving it are descriptive.
 pairs = list(
   CV_vs_R47H   = c("CV_AD",   "R47H_AD"),
   CV_vs_R62H   = c("CV_AD",   "R62H_AD"),

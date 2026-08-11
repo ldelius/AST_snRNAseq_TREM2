@@ -1,18 +1,8 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_E03c: GSEA of the 5-covariate (E02c) pseudobulk results", Sys.time(),
-        "\n##########################################################################\n",
+        "# Start LD_E03c: Five-covariate pseudobulk GSEA ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# what this script does (copied from LD_E03b2; only the inputs/cutoffs differ):
-## - runs pre-ranked GSEA (fgsea) on each E02c DESeq2 comparison
-## - tests Hallmark + Green et al. astrocyte-state signatures ONLY
-## - plots NES heatmaps (pathways x comparisons) the same way as E03b2, but
-##   significance is FDR-based (padj) rather than nominal p, and heatmaps are
-##   produced at BOTH FDR < 0.05 and FDR < 0.1, for ALL subclusters and for the
-##   7 largest subclusters, in both all-significant and top-10 row selections.
-## - also writes a "dropped" report: pathways nominal-significant but not FDR-sig.
-
-# Open packages necessary for analysis.
+# Re-runs E03b2 on the five-covariate E02c results using FDR rather than nominal p-values.
 library(qs)
 library(tidyverse)
 library(DESeq2)
@@ -611,5 +601,3 @@ sessionInfo()
 message("\n\n##########################################################################\n",
         "# Completed LD_E03c ", Sys.time(),
         "\n##########################################################################\n\n\n")
-
-

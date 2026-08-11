@@ -1,22 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start G03b: CellChat per-run visualisation - by TREM2Variant ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Loads the three CellChat objects from G02b (CV, R47H, R62H) and produces\n",
-        "   the same visualisations as G03a, plus three additions:\n",
-        "     - MIC->AST-only signallingRole heatmap (custom, masked to MIC sources\n",
-        "       x AST targets)\n",
-        "     - MIC->AST-only per-pathway chord (custom, MIC senders, AST receivers,\n",
-        "       no autocrine)\n",
-        "     - Section 13 PDF write switched to cairo_pdf and per-page error guards\n",
-        "       (G03a's section 13 PDF was corrupted)\n",
-        "\n   Combined output: one multi-page PDF per plot type, side-by-side panels for\n",
-        "   CV/R47H/R62H where feasible, per-variant pages otherwise.\n",
-        "\n   computeCommunProbPathway() and aggregateNet() were already run in G02b;\n",
-        "   netAnalysis_computeCentrality() runs here per variant (G02b skipped it).\n",
+        "# Start LD_G03b: CellChat visualisation by TREM2 variant ", Sys.time(),
         "\n##########################################################################\n\n")
 
-
-#set environment/load packages
 library(qs)
 library(tidyverse)
 library(CellChat)

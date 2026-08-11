@@ -1,16 +1,7 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_E03a2: DEG characterisation - pairwise log2FC comparisons and GO", Sys.time(),
-        "\n##########################################################################\n",
+        "# Start LD_E03a2: Pairwise log2FC comparisons and GO ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# what this script does:
-# - Compare pairs of existing DESeq2 contrasts across two comparisons.
-# - Group genes into concordant, discordant, or comparison-specific regulation patterns
-#   (e.g. up_up, down_down, up_down, up_nreg), and visualise in log2FC scatter plots.
-# - Run GO biological process enrichment on these gene groups to identify which pathways
-#   are shared, opposite, or specific between the compared contrasts.
-
-# Open packages necessary for analysis.
 library(qs)
 library(tidyverse)
 library(DESeq2)
@@ -724,5 +715,3 @@ message("\n\n###################################################################
         "# Completed LD_E03a2 ", Sys.time(),
         "\n##########################################################################\n",
         "\n##########################################################################\n\n\n")
-
-

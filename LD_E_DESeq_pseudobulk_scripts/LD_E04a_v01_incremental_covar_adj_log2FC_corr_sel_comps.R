@@ -1,48 +1,13 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_E04a: Incremental covariate adjustment + selected log2FC-corr plots ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Re-runs the TREM2 variant DESeq2 contrasts under progressively more",
-        "\n   covariate adjustment, then redraws the log2FC-correlation scatter plots",
-        "\n   Michael liked, to test whether the variant effect survives adjustment.",
+        "# Start LD_E04a: Incremental covariate adjustment ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# WHAT THIS SCRIPT DOES (combines the relevant parts of LD_E02a2 + LD_E03a2)
-# ---------------------------------------------------------------------------
-# Michael liked the log2FC correlation between the two TREM2 variants vs CV
-# (file LD_E03a2_v02_Log2FC_corr_sel_comps_reg_both.pdf). He asked whether that
-# effect survives correction for additional covariates, ideally staying in the
-# same direction even if weaker.
-#
-# The fold-changes in that plot come from DESeq2 models whose design only
-# corrected for APOEgroup + CD33Group + BrainRegion. Here we re-run those models
-# adding covariates ONE GROUP AT A TIME (because the per-cluster / AD-only /
-# per-variant subsets are small, we cannot fit all covariates at once - models
-# become unidentifiable or covariates collinear, so clusters get dropped).
-#
-# Covariate order ("clean -> severity", chosen from the variancePartition
-# results in LD_H02_v02_var_genes_var_expl_by_covars_mean_ord.csv): add the
-# technical / independent covariates first and the disease-severity proxy (Braak)
-# last, because Braak/pathology correlate with TREM2Variant itself and adjusting
-# for them risks regressing out the very effect of interest (over-correction).
-#
-# For each covariate level we run 4 contrasts and draw the 4 scatter pairs:
-#   contrasts : CV_AD_vs_Control, R62H_vs_CV, R47H_vs_CV, R47H_vs_R62H
-#   pairs (y vs x):
-#     P1  R62H_vs_CV      vs  R47H_vs_CV        <- the one Michael liked
-#     P2  R47H_vs_CV      vs  CV_AD_vs_Control
-#     P3  R62H_vs_CV      vs  CV_AD_vs_Control
-#     P4  R47H_vs_R62H    vs  CV_AD_vs_Control
-# Run both per astrocyte cluster AND pooled (all clusters combined; cluster_name
-# added as a covariate). Plots are faceted by covariate level so any weakening of
-# the slope is visible at a glance, and a robustness summary table/plot reports
-# the regression slope, Pearson r and % concordant genes per adjustment level.
-#
-# NOTE on the pooled analysis: the same donor contributes several cluster
-# pseudobulks, so pooled models are pseudo-replicated (DESeq2 LRT treats them as
-# independent). Pooled results are exploratory robustness checks - cluster_name
-# is included as a fixed covariate to absorb baseline between-cluster differences.
-
-# Open packages necessary for analysis.
+# Covariates are added incrementally because the per-cluster, AD-only subsets
+# cannot support the full model without collinearity or unidentifiable terms.
+# Technical covariates are added before Braak because pathology correlates with
+# TREM2Variant and may remove part of the effect of interest.
+# Pooled results are exploratory because donors contribute several cluster
+# pseudobulks; cluster_name absorbs baseline between-cluster differences.
 library(qs)
 library(tidyverse)
 library(DESeq2)
