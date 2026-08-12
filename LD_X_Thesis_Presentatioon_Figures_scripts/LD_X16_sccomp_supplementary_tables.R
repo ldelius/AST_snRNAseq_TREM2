@@ -11,10 +11,7 @@ out_dir    = file.path(base, "LD_X_Thesis_Presentation_output")
 script_ind = "LD_X16_"
 FDR_CUT    = 0.05
 
-# WHICH LD_X05 RESULT SET TO USE. Pinned deliberately, NOT auto-latest: the v05
-# rerun (which adds effect sizes) should not silently replace the tables already
-# built from v03. Set to "v05" once that rerun has finished and been checked, or
-# to "latest" to always take the highest version present.
+# Pin the result set to avoid silently changing the submitted tables.
 RESULT_SET = "v03"
 
 hits = list.files(out_dir, pattern = "^LD_X05_v[0-9]+_sccomp_.*\\.csv$",

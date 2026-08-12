@@ -132,7 +132,7 @@ names(log2FC_comps)
 goi_sets = read_csv(paste0(main_dir,"data_TREM2_michael/A_input/GOI_sets_251020.csv"))
 
 t1 = read_csv(paste0(main_dir,"data_TREM2_michael/A_input/cell_type_markers_241219_w_astr_subtype_markers.csv"))
-subtype_markers = t1[t1$lineage %in% c("Astrocyte", "AST", "AST_RG"),] # Michael used "Microglia"; replaced with astrocyte lineages
+subtype_markers = t1[t1$lineage %in% c("Astrocyte", "AST", "AST_RG"),]
 
 
 ###get TF gene panels

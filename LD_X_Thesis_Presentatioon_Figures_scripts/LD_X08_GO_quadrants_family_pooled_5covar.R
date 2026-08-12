@@ -197,11 +197,7 @@ if (!is.null(GO_all)) write_csv(GO_all, file = file.path(out_dir, paste0(script_
 
 
 ### dotplot: top 10 GO terms per quadrant, three pairs side by side, one page per scope
-# NB: quadrant is mapped to a discrete x-axis; ggplot's default scale_x_discrete()
-# has drop = TRUE, which silently removes any quadrant with zero significant terms
-# from the axis (e.g. up_up often has 0 hits - see gene_counts vs GO_all). Setting
-# drop = FALSE forces all 4 quadrants to always appear, empty or not, so a missing
-# category reads as "0 significant terms", not as if that quadrant was never tested.
+# Keep all four discrete quadrants so empty columns indicate zero significant terms.
 
 make_go_dotplot_scope = function(scope, title){
   if (is.null(GO_all)) return(NULL)

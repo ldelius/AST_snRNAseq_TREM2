@@ -52,14 +52,14 @@ t1$cohort = factor(t1$cohort, levels = c("BiogenInitial", "BiogenExtra"))
 covars_corr = c("cohort", "APOEgroup", "CD33Group", "BrainRegion")
 
 # define reference cluster for between cluster "response" comparisons
-ref_cluster = "AST_SLC1A2_s0" # changed from HOM_s0 for MIC
+ref_cluster = "AST_SLC1A2_s0"
 
 #remove samples with missing covariate values
 for (var1 in model_vars){
   t1 = t1[!is.na(t1[[var1]]),]
 }
 
-#filter for clusters containing at least 2 samples for 2 different levels for all analysed variables -->  DESeq2 can't estimate effects without variation
+# Require at least two samples in two levels of every analysed variable.
 
 for (var1 in model_vars){
   t1$model_var = t1[[var1]]
@@ -207,7 +207,7 @@ bulk_data$counts = comp_counts
 #######################################
 # calculate uncorrected and corrected vst matrix and corresponding gene z-scores
 #######################################
-# vst = variance stabilising transformation to make sure that data is roughly homoscedastic and variance is similar across low and high expression genes
+# Variance-stabilising transformation for downstream visualisation.
 ### extract vst-normalised matrix for combined dataset
 
 dds = DESeqDataSetFromMatrix(comp_counts, colData = comp_meta, 
@@ -234,7 +234,7 @@ for (cov1 in covars_corr){
 
 bulk_data$vst_mat = vst_mat_corr
 
-#calculate Z-score per gene by pseudobulk (cluster_sample) for all clusters combined (from uncorrected and corrected vst matrix)
+# Gene z-scores across cluster-sample pseudobulks.
 cluster_sample_mat = t(apply(vst_mat, 1, scale))
 colnames(cluster_sample_mat) = colnames(vst_mat)
 bulk_data$gene_Z_scores_uncorr[["clusters_combined"]] = cluster_sample_mat
@@ -248,9 +248,7 @@ bulk_data$gene_Z_scores[["clusters_combined"]] = cluster_sample_mat
 #######################################
 # plot PCA plot samples (by cluster, based on uncorrected vst matrix)
 #######################################
-# For each cluster individually and for all clusters combined: Selects top 3000 most variable genes (these drive the most biological variation),
-# performs PCA on the vst-normalised expression of these genes, and plots the first 2 principal components with samples colored by group (TREM2 variant and diagnosis groups)
-# and labelled by sample ID. This is done separately for the uncorrected vst matrix and the covariate-corrected vst matrix, to assess how well samples cluster by group and whether there are any outliers or batch effects.
+# PCA of the 3,000 most variable genes before and after covariate correction.
 meta = bulk_data$meta
 
 samples = unique(bulk_data$gr_tab$sample)
@@ -267,7 +265,7 @@ var_genes = names(v1[order(-v1)][1:3000])
 
 pl = list()
 
-cl = "AST_SLC1A2_s4" # changed from HOM...for MIC
+cl = "AST_SLC1A2_s4"
 
 for (cl in comp_clusters){
   
@@ -386,8 +384,7 @@ dev.off()
 #######################################
 # Run DESeq2 analysis cluster X vs ref_cluster (common variant only)
 #######################################
-# compares pseudobulk expression of that cluster against AST_SLC1A2_s0, using only CV samples.
-# identifies genes that are differentially expressed between astrocyte subtypes in the absence of TREM2 mutations (regardles of AD vs ctrl)
+# Common-variant pseudobulk expression relative to AST_SLC1A2_s0.
 
 message("\n\n          *** Running DESeq2 analysis  - ", Sys.time(),"\n\n")
 
@@ -426,9 +423,8 @@ for (cl in comp_clusters[comp_clusters != ref_cluster]){
 #######################################
 # Run Deseq analysis within clusters CV AD vs Control
 #######################################
-# for each cluster it tests AD vs ctrl in CV individuals, correcting for covariates (APOE, CD33, BrainRegion, Cohort).
-# Q: Which genes change in AD vs Control within each astrocyte cluster, independent of APOE, CD33, and brain region
-cl = "AST_SLC1A2_s3" # changed from HOM_s9 for MIC
+# AD versus Control in common-variant samples, adjusted for model covariates.
+cl = "AST_SLC1A2_s3"
 
 for (cl in comp_clusters){
   
@@ -553,8 +549,8 @@ for (cl in comp_clusters){
 #######################################
 # Run Deseq analysis within clusters TREM2 R62H vs CV (only AD cases) 
 #######################################
-# for each cluster it tests TREM2 R62H vs CV in AD individuals, correcting for covariates (APOE, CD33, BrainRegion, Cohort).
-cl = "AST_GFAP_s2" # changed from IRM_s14 for MIC
+# R62H versus CV within AD, adjusted for model covariates.
+cl = "AST_GFAP_s2"
 
 for (cl in comp_clusters){
   
@@ -674,8 +670,8 @@ for (cl in comp_clusters){
 #######################################
 # Run Deseq analysis within clusters TREM2 R47H vs CV (only AD cases) 
 #######################################
-# for each cluster it tests TREM2 R47H vs CV in AD individuals, correcting for covariates (APOE, CD33, BrainRegion, Cohort).
-cl = "AST_GFAP_s2" # changend from IRM_s14 for MIC
+# R47H versus CV within AD, adjusted for model covariates.
+cl = "AST_GFAP_s2"
 
 for (cl in comp_clusters){
   
@@ -796,8 +792,8 @@ for (cl in comp_clusters){
 #######################################
 # Run Deseq analysis within clusters TREM2 R47H vs R62H (only AD cases) 
 #######################################
-# for each cluster it tests TREM2 R47H vs R62H in AD individuals, correcting for covariates (APOE, CD33, BrainRegion, Cohort).
-cl = "AST_GFAP_s2" # changed from IRM_s14 for MIC
+# R47H versus R62H within AD, adjusted for model covariates.
+cl = "AST_GFAP_s2"
 
 for (cl in comp_clusters){
   
@@ -987,12 +983,6 @@ write_csv(t1, file = paste0(out_dir,script_ind, "DEGs_by_cluster_N.csv"))
 # Bar chart: Number of DEGs per cluster per comparison
 # Split by direction (up/down) and gene category (TF vs other)
 ###########################################################
-# For each of the 5 DESeq2 comparisons and each astrocyte cluster:
-#   - bars above zero  = upregulated DEGs  (solid red = TF, light red = other)
-#   - bars below zero  = downregulated DEGs (solid blue = TF, light blue = other)
-# Faceted by comparison so you can see which clusters are most strongly affected
-# and whether regulatory genes (TFs) are disproportionately involved.
-
 message("\n          *** Plotting DEG count bar chart... ", Sys.time(), "\n")
 
 # load cluster order from cluster assignment table (preserves biological ordering)

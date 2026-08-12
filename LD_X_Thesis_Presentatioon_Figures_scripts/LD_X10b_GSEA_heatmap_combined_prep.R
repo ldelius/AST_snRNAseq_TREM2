@@ -145,8 +145,7 @@ custom_group_colors = c(
   "Proliferation and damage" = "#E6AB02", "Structural remodelling" = "#A6761D",
   "Other signalling" = "#666666")
 
-# Green24 state display labels (order = Ast.1 -> Ast.10) - matches the labels
-# already fixed in LD_X04c / LD_X04_B_characterisation_plots.R / LD_X10 earlier
+# Green24 state display labels in Ast.1 to Ast.10 order.
 green_state_labels = c(
   "Green24_Ast.1"  = "Ast1 homeostatic",
   "Green24_Ast.2"  = "Ast2 homeostatic",
@@ -166,14 +165,9 @@ green_state_labels = c(
 # side-bar (row_split only creates the gap/order; its own text titles are
 # suppressed via row_title = NULL so the colour + legend does the labelling).
 #
-# build_heatmap() returns the Heatmap OBJECT (not drawn yet) plus a suggested
-# standalone width/height - split out from drawing so the same object can
-# either be saved on its own, or placed into the combined side-by-side figure
-# further down. Cell shape: rectangular (narrower than tall), not square -
-# columns are fixed-width (comparisons don't vary), so shrinking column width
-# is pure width-saving; rows get slightly MORE height to keep it legible.
-CELL_W = 0.09   # in, per column - was 0.20, then 0.13; pushed narrower again
-CELL_H = 0.20   # in, per row    - was 0.18; a bit taller to stay legible when narrower
+# Return an undrawn heatmap for standalone and combined output.
+CELL_W = 0.09   # inches per column
+CELL_H = 0.20   # inches per row
 
 build_heatmap = function(mat, collection){
   stopifnot(identical(colnames(mat), comps_largest))
@@ -200,7 +194,7 @@ build_heatmap = function(mat, collection){
     left_annot = rowAnnotation(group = grp, col = list(group = custom_group_colors),
                                show_annotation_name = FALSE,
                                annotation_legend_param = list(group = list(nrow = 4)))
-  } else {                                                # Green: cluster as original
+  } else {                                                # cluster Green terms
     row_split = NULL; cluster_rows = TRUE
     row_labels = unname(green_state_labels[rownames(mat)])
   }
@@ -218,7 +212,7 @@ build_heatmap = function(mat, collection){
   # true data range instead of a wider auto-extended one
   legend_at = round(c(-lim, -lim / 2, 0, lim / 2, lim), 1)
 
-  row_fontsize = 9   # same size in both panels (was 8 Hallmark / 13 Green)
+  row_fontsize = 9
 
   ht = Heatmap(mat, name = "NES", col = col_fun,
               cluster_rows = cluster_rows, cluster_columns = FALSE,

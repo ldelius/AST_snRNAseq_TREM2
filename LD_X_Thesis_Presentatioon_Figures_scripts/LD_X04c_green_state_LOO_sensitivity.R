@@ -60,8 +60,6 @@ set.seed(1234)
 seur = AddModuleScore(seur, features = sig_loo, name = "GreenLOO_")  # -> GreenLOO_1 .. GreenLOO_10
 
 ### dot plots: full vs LOO, same style as LD_X04 Plot 1 -------------------------
-# DotPlot just reads already-computed metadata columns, so this is cheap - fine
-# to keep in this lightweight script.
 score_cols_full = paste0("Green24_",  seq_along(ast_states))
 score_cols_loo  = paste0("GreenLOO_", seq_along(ast_states))
 
@@ -133,7 +131,7 @@ if (!file.exists(go_csv)) {
   res = read_csv(go_csv, show_col_types = FALSE)
   sig_clusters = cluster_names[cluster_names %in% unique(as.character(res$Cluster))]
 
-  # same exclusion list / curated row order as LD_X04_v02_replot_curated_GO.R
+  # Curated exclusions and term order used for the final GO panel.
   curated_exclude_terms = c(
     "muscle contraction", "muscle system process", "stem cell differentiation",
     "regulation of plasma membrane organization", "regulation of receptor recycling",
@@ -199,10 +197,7 @@ if (!file.exists(go_csv)) {
           axis.text.y = element_text(size = 12.5),
           plot.margin = margin(t = 10, r = 8, b = 4, l = 6))
 
-  # side by side: Green (A) = 45% width, GO (B) = 55%; heights deliberately
-  # NOT matched between the two panels. Legend TEXT (not key size) shrunk here,
-  # combined-figure-only - the legend keys are already slim, it's the text that
-  # was padding out the legend's width and stealing space from the panels.
+  # Use unequal panel widths and compact legend text in the combined figure.
   fig = (p_full | p_go) +
     patchwork::plot_layout(widths = c(0.45, 0.55)) +
     patchwork::plot_annotation(tag_levels = "a") &
@@ -264,9 +259,7 @@ rank_corr_by_state = full %>% dplyr::rename(z_full = z) %>%
   dplyr::arrange(state_ix) %>%
   dplyr::select(state_lab, genes_removed, r)
 
-# per state: FULL ranking of every subcluster (not just the winner), full vs LOO,
-# so you can see how far any given subcluster moved, not just whether the top
-# pick changed. Rank 1 = highest z (top-scoring) within that state.
+# Full subcluster ranking before and after marker exclusion; rank 1 is highest z.
 full_ranking_by_state = full %>% dplyr::rename(z_full = z) %>%
   dplyr::select(state, cluster_name, z_full) %>%
   dplyr::left_join(loo %>% dplyr::select(state, cluster_name, z_loo = z),

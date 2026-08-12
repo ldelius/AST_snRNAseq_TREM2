@@ -8,7 +8,7 @@
 # Pathology measures: amyloid plaque density (TotalDensity), and tau % positive
 #   area for AT8 (pSer202/Thr205) and PHF1 (pSer396/404).
 #
-# CAVEATS (built into comments below):
+# Caveats:
 #   - R47H has ~8 AD donors -> its slopes / R47H-CV contrasts are exploratory.
 #   - TREM2 variant and pathology are correlated (R62H carries higher burden), so
 #     variants span different pathology ranges; slope comparisons assume a common
@@ -19,7 +19,7 @@
 #     adjusted sccomp interaction, whose slopes need not match the raw lines.
 #   - sccomp FDR is per model; the 3 pathology measures are separate analyses.
 #
-# DATA: LD_B04a_v02_seur.qs (metadata for cluster counts) + samplesheet + plaque CSV.
+# Inputs: LD_B04a_v02_seur.qs, samplesheet and plaque CSV.
 
 library(tidyverse)
 library(qs)

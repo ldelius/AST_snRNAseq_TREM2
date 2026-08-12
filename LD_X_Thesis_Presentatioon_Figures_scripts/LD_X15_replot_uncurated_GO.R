@@ -23,8 +23,7 @@ sig_clusters  = cluster_names[cluster_names %in% unique(as.character(res$Cluster
 
 n_terms = 5
 
-# top n terms per subcluster by adjusted p, then show every significant
-# (subcluster, term) pair among those terms - identical selection to the original
+# Top terms per subcluster and all significant pairs involving those terms.
 topn = res %>% dplyr::filter(Cluster %in% sig_clusters) %>%
   dplyr::group_by(Cluster) %>%
   dplyr::slice_min(p.adjust, n = n_terms, with_ties = FALSE) %>% dplyr::ungroup()
@@ -34,9 +33,7 @@ pdat = res %>% dplyr::filter(Cluster %in% sig_clusters, Description %in% terms_s
 clusters = sig_clusters[sig_clusters %in% unique(as.character(pdat$Cluster))]
 pdat$Cluster = factor(pdat$Cluster, levels = clusters)
 
-# y-axis order (same rule as the un-curated original): group each term by the
-# subtype of its most significant subcluster, SLC1A2 -> GFAP -> CHI3L1, so CHI3L1
-# terms end up at the TOP of the axis
+# Group terms by the subtype of their most significant subcluster.
 term_ord = topn %>% dplyr::group_by(Description) %>%
   dplyr::slice_min(p.adjust, n = 1, with_ties = FALSE) %>% dplyr::ungroup() %>%
   dplyr::mutate(subtype = sub("_s[0-9]+$", "", Cluster),
@@ -50,9 +47,7 @@ p = ggplot(pdat, aes(x = Cluster, y = Description,
   geom_point() +
   scale_x_discrete(limits = clusters, drop = FALSE, expand = expansion(add = 0.55)) +
   scale_size_continuous(name = "Gene count", range = c(1, 6)) +
-  # THE CHANGE: grey -> black, matching the curated main-results figure. Magnitude
-  # only (all markers are only.pos = TRUE, so there is no "down" direction), and
-  # kept off the blue/orange hue family used for the signed Green24 z-scores.
+  # Achromatic scale for magnitude-only GO enrichment.
   scale_colour_gradient(name = "-log10(adj. p)", low = "grey80", high = "black") +
   labs(x = NULL, y = NULL) +
   theme_bw(base_size = 13)

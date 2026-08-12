@@ -62,9 +62,8 @@ t1$BrainRegion = factor(t1$BrainRegion, levels = c("MTG","SSC"))
 t1$Sex = factor(t1$Sex, levels = c("F","M"))
 t1$cohort = factor(t1$cohort, levels = unique(t1$cohort))
 
-#technical covariates re-added (matching F02a1): PMI numeric + log10 pseudobulk library size.
-#library size = total counts per pseudobulk (colSums of the count matrix); log10 stabilises scale.
-#NB bulk_data$counts is still the full matrix here (subset below), so index by t1$cluster_sample.
+# Technical covariates: numeric PMI and log10 pseudobulk library size.
+# Index the full count matrix by cluster_sample before subsetting below.
 t1$PostMortemInterval = as.numeric(t1$PostMortemInterval)
 t1$log10_nCount_RNA   = log10(colSums(bulk_data$counts[, t1$cluster_sample]))
 
@@ -76,9 +75,7 @@ bulk_data$counts = m2
 
 
 ### define formula for extracting differential genes (LRT tests TREM2Variant)
-### NB: 5 GSEA covariates + 2 technical (PostMortemInterval + log10_nCount_RNA, matching F02a1)
-###     + cluster_name. The SAME 7-covariate set is used in covars_corr below: the design
-###     controls the DEG test; the correction cleans the WGCNA matrix.
+### The same seven covariates are used in the design and WGCNA correction.
 form_full = "~cohort + BrainRegion + APOEgroup + CD33Group + Sex + PostMortemInterval + log10_nCount_RNA + cluster_name + TREM2Variant"
 form_red  = "~cohort + BrainRegion + APOEgroup + CD33Group + Sex + PostMortemInterval + log10_nCount_RNA + cluster_name"
 
@@ -243,7 +240,7 @@ vst_mat = assay(vst(dds))
 
 bulk_data$vst_mat_uncorr = vst_mat
 
-#batch-correct vst matrix for the 7 covariates (numeric -> covariates=, factor -> batch=), group-protected (preserve variant biology)
+# Correct seven covariates while preserving variant groups.
 vst_mat_corr = vst_mat
 
 for (cov1 in covars_corr){
@@ -258,7 +255,7 @@ for (cov1 in covars_corr){
 
 bulk_data$vst_mat = vst_mat_corr
 
-#calculate Z-score per gene by pseudobulk (cluster_sample) for all clusters combined (from uncorrected and corrected vst matrix)
+# Gene z-scores across cluster-sample pseudobulks.
 cluster_sample_mat = t(apply(vst_mat, 1, scale))
 colnames(cluster_sample_mat) = colnames(vst_mat)
 bulk_data$gene_Z_scores_uncorr[["clusters_combined"]] = cluster_sample_mat
@@ -268,7 +265,7 @@ colnames(cluster_sample_mat) = colnames(vst_mat_corr)
 bulk_data$gene_Z_scores[["clusters_combined"]] = cluster_sample_mat
 
 
-### extract DESeq results and DEGs (stored for the OPTIONAL variant-seeded network B; NOT used by the primary A)
+### extract DESeq results and DEGs for the variant-seeded network
 
 t0 = as.data.frame(results(dds))
 t1 = cbind(gene = rownames(t0), t0)

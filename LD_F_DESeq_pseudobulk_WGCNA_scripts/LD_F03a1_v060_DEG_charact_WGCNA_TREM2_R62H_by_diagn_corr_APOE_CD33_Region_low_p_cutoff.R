@@ -248,7 +248,6 @@ bulk_data$wgcna$input_mat = input_mat
 
 
 allowWGCNAThreads()          # allow multi-threading (optional)
-#> Allowing multi-threading with up to 4 threads.
 
 # Choose a set of soft-thresholding powers
 powers = c(c(1:10), seq(from = 12, to = 20, by = 2))
@@ -466,16 +465,9 @@ pdf(file = paste0(out_dir,script_ind, "Module_eigengene_heatmap_by_sample.pdf"),
 dev.off()
 
 
-######################################################################
 ### Exploratory module-trait correlation screen (WGCNA approach)
-###
-### NOTE: samples here are cluster_sample pseudobulks pooled across
-### clusters. A module that is simply "high in one cluster" will
-### correlate with any trait that is unevenly distributed across
-### clusters, so correlations reflect both biology of interest and
-### cluster-identity confounding. Treat as an exploratory screen,
-### not a confirmatory test.
-######################################################################
+# Cluster-sample pseudobulks pool clusters, so trait correlations may reflect
+# cluster identity as well as the biology of interest; treat them as exploratory.
 
 message("\n\n   *Compute exploratory module-trait correlation screen \n")
 

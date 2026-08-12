@@ -372,9 +372,8 @@ for (v in variant_levels){
 # 8. signalling-role heatmaps - MIC->AST pathways only
 ###########################################################
 
-# Same as section 6 but restricted to union MIC->AST pathways.
-# NOTE: still shows total outgoing/incoming per cluster in these pathways - not
-# direction-restricted. For MIC->AST flow specifically, see section 8b.
+# Restricted to the union of MIC-to-AST pathways. Values are total outgoing and
+# incoming signalling per cluster; direction-specific flow is shown in section 8b.
 
 message("\n\n          *** Signalling-role heatmaps (MIC->AST pathways)... ", Sys.time(), "\n\n")
 

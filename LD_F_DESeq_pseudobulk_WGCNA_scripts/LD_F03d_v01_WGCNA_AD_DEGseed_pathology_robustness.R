@@ -217,17 +217,9 @@ for (model_name in names(path_models)){
   bd = bulk_data
 
 
-  #######################################
-  # Single-pass correction from uncorrected VST matrix
-  # Replicates F02c's sequential group-protected removeBatchEffect for the 7 main
-  # covariates (same order as F02c's covars_corr), then continues with the
-  # model-specific pathology covariates — all in one sequential pass starting
-  # from vst_mat_uncorr. This is equivalent to the previous two-step approach
-  # (F02c's 7-covar output + F03d pathology correction) because F02c itself uses
-  # sequential correction, and sequential removeBatchEffect is order-independent
-  # given the same group-protection at each step. The change makes F03d
-  # self-contained and removes the dependency on F02c's pre-corrected matrix.
-  #######################################
+  ### Single-pass correction from the uncorrected VST matrix
+  # Apply the F02c covariates followed by the model-specific pathology covariates,
+  # preserving the analysis group at each removeBatchEffect step.
 
   message("\n   *Single-pass correction: 7 main covariates + pathology (", model_name, ") \n")
 

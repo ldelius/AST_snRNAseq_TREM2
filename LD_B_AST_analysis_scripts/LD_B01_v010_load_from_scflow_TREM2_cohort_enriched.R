@@ -157,7 +157,7 @@ if (length(cells)>100000){ # if more than 100,000 cells, randomly sample 100,000
 } 
 
 
-#umap plots for cell type (originally asigned cell type; manual plotting with ggplot (seurat plots do not work without dimensionality reductions))
+# Cell-type UMAP plotted directly because the Seurat object lacks reductions.
 pl = list()
 
 t1 = seur@meta.data

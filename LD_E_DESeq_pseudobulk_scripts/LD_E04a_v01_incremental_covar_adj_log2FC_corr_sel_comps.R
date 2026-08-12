@@ -27,7 +27,7 @@ script_ind = "LD_E04a_v01_"
 out_dir = paste0(main_dir, "LD_E_DESeq_pseudobulk/")
 
 
-### load pseudobulk dataset (same object that produced Michael's plot)
+### load pseudobulk dataset
 
 bulk_data = qread(file = paste0(out_dir, "LD_E01_v02_bulk_data.qs"))
 
@@ -78,11 +78,8 @@ meta$Braak_num  = as.numeric(scale(meta$Braak_raw))
 bulk_data$meta = meta
 
 
-### apply the SAME sample/cluster filtering as LD_E02a2 (so M0 reproduces E03)
-# E02a2 drops samples with NA in any of its model_vars up front, then keeps only
-# clusters with >=2 samples in >=2 levels for each model_var (E02a2 lines 50-78).
-# This defines the shared base sample/cluster set; the extra covariates' NAs are
-# handled per-level inside run_deseq_guarded (a no-op at M0).
+### apply the E02a2 base filter so M0 reproduces E03
+# Missing values in added covariates are handled within each adjustment level.
 
 e02_model_vars = c("cohort", "APOEgroup", "CD33Group", "BrainRegion",
                    "NeuropathologicalDiagnosis", "TREM2Variant")
@@ -147,7 +144,7 @@ covar_levels = names(covar_sets)
 # define the 4 DESeq2 contrasts feeding the requested plots
 ###########################################################
 # Each contrast = a subset of the data + a tested variable (and its reference
-# level). Reference levels chosen so log2FC signs match the original E02a2 plot.
+# level). Reference levels preserve the E02a2 log2FC direction.
 
 contrast_defs = list(
   CV_AD_vs_Control = list(
@@ -268,13 +265,8 @@ run_deseq_guarded = function(meta_sub, counts_sub, covars, tested, add_cluster =
 ###########################################################
 # run all contrasts x covariate levels x scopes (parallel + resumable)
 ###########################################################
-# Each (scope, level, contrast) is an independent DESeq2 LRT. There are several
-# hundred and each takes ~30-45s, so single-threaded this is ~4-5h. We therefore
-# (a) run them in PARALLEL across the allocated cores and (b) CHECKPOINT every
-# result to its own .rds file. If the job is killed (e.g. walltime), just
-# resubmit: finished runs are detected on disk and skipped, so it resumes where
-# it stopped. (If you change the MODELS - covar_sets/contrasts/filtering - delete
-# the ckpt/ directory first so stale results are not reused.)
+# Independent LRTs are checkpointed for resumable parallel execution.
+# Delete the checkpoint directory if model or filtering settings change.
 
 scopes = c(as.character(comp_clusters), "pooled")
 
@@ -406,7 +398,7 @@ for (scope in scopes){
     for (level in covar_levels){
       d = tab[tab$level == level, ]
       if (nrow(d) < 3) next
-      # genes regulated (p<0.05) in BOTH contrasts (Michael's "reg_both" plot)
+      # genes regulated at p < 0.05 in both contrasts
       db = d[d$reg != "nreg" & d$reg_ref != "nreg", ]
       slope_fun = function(x) if (nrow(x) >= 3) unname(coef(lm(log2FC ~ log2FC_ref, x))[2]) else NA_real_
       r_fun     = function(x) if (nrow(x) >= 3) suppressWarnings(cor(x$log2FC_ref, x$log2FC)) else NA_real_

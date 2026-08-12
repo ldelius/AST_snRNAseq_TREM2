@@ -32,7 +32,7 @@ dir.create(out_dir, showWarnings = FALSE)
 script_ind = "LD_F03c_v02_"
 
 
-### load DEseq2 dataset (F02c: AD-only, both variants, 5-covar group-protected corrected matrix)
+### load DEseq2 dataset (F02c: AD-only, both variants, seven-covariate correction)
 bulk_data = qread(file = paste0(in_dir,"LD_F02c_v01_bulk_data.qs"))
 
 
@@ -66,9 +66,7 @@ for (subtype in unique(t2$subtype)){
 t1 = bulk_data$meta
 names(t1)
 
-# coerce numeric covariates to numeric: F02c does not coerce these (F02a1 did upstream, which is
-# why F03a1 worked). Needed so the module-trait correlations and the plaque/covariate scatter
-# plots treat them as numeric rather than character. (These columns are not factored, so safe.)
+# Coerce numeric covariates for module-trait correlations and scatter plots.
 t1$PostMortemInterval  = as.numeric(t1$PostMortemInterval)
 t1$plaque_dens         = as.numeric(t1$plaque_dens)
 t1$Age                 = as.numeric(t1$Age)
@@ -254,18 +252,14 @@ create_heatmap_annot = function(annot_df, annot_dim = c("column", "row"),
 
 message("\n\n          *** Calculate soft-thresholding power... ", Sys.time(),"\n\n")
 
-# Strategy B (variant-seeded, DESCRIPTIVE): network on the F02c variant DEGs (TREM2 LRT p<0.05),
-# from the SAME AD-only 5-covar corrected matrix as v01. Variant-seeded twin of v01.
-# IMPORTANT: genes are pre-selected on the variant, so the module-trait correlation and the donor
-# LMM below are CIRCULAR for TREM2 - kept for visualisation but read DESCRIPTIVELY only ("the
-# variant response organises into these modules / directions"), NOT as a significance test.
-# The inferential 'which modules up/down in the variants, with stats' question = v01 (all-genes).
+# Variant-seeded network using F02c TREM2 LRT genes at p < 0.05.
+# TREM2 module-trait associations are circular after variant-based gene selection
+# and must be interpreted descriptively, not as significance tests.
 input_mat = t(bulk_data$vst_mat[unique(unlist(bulk_data$DEGs)),])
 bulk_data$wgcna$input_mat = input_mat
 
 
 allowWGCNAThreads()          # allow multi-threading (optional)
-#> Allowing multi-threading with up to 4 threads.
 
 # Choose a set of soft-thresholding powers
 powers = c(c(1:10), seq(from = 12, to = 20, by = 2))
@@ -520,16 +514,9 @@ pdf(file = paste0(out_dir,script_ind, "Module_eigengene_heatmap_by_TREM2Variant.
 dev.off()
 
 
-######################################################################
 ### Exploratory module-trait correlation screen (WGCNA approach)
-###
-### NOTE: samples here are cluster_sample pseudobulks pooled across
-### clusters. A module that is simply "high in one cluster" will
-### correlate with any trait that is unevenly distributed across
-### clusters, so correlations reflect both biology of interest and
-### cluster-identity confounding. Treat as an exploratory screen,
-### not a confirmatory test.
-######################################################################
+# Cluster-sample pseudobulks pool clusters, so trait correlations may reflect
+# cluster identity as well as the biology of interest; treat them as exploratory.
 
 message("\n\n   *Compute exploratory module-trait correlation screen \n")
 

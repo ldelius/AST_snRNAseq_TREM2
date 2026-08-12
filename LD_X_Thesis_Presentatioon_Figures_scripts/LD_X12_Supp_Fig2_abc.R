@@ -160,8 +160,7 @@ dp_a = read_csv(cache_a, show_col_types = FALSE) %>%
     cluster = factor(as.integer(cluster), levels = rev(sort(unique(as.integer(cluster))))),
     removed = as.integer(as.character(cluster)) %in% removed)
 
-# Removed clusters are marked by bolding their number on the y axis. Outlining the
-# whole row (an earlier version) added too many competing lines across the panel.
+# Removed clusters are identified by bold y-axis labels.
 faces_a = ifelse(as.integer(levels(dp_a$cluster)) %in% removed, "bold", "plain")
 
 pa = ggplot(dp_a, aes(x = gene, y = cluster)) +

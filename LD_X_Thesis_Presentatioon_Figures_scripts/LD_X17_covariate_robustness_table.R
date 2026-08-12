@@ -12,21 +12,11 @@ out_dir    = file.path(base, "LD_X_Thesis_Presentation_output")
 clust_csv  = file.path(base, "LD_B_AST_analysis_output/LD_B03a_cluster_assignment.csv")
 script_ind = "LD_X17_"
 
-# SWITCH TO "E04c" once LD_E04c has been rerun with per-subcluster scopes.
 SOURCE = "E04c"
 
-# WHICH GENES ENTER EACH CORRELATION. Only applies to SOURCE = "E04c", and needs
-# LD_X17b_recompute_robustness_measures.R to have been run (it derives all three
-# from LD_E04c's checkpoints without refitting anything).
-#   "nominal"  nominal p < 0.05 in BOTH contrasts. Fills every cell (median ~170
-#              genes) and still selects for genes with an effect in both. This is
-#              the rule the Results text was written from.
-#   "sig_both" padj < 0.1 in both contrasts - matches the LD_X07 figure exactly,
-#              but at subcluster level the median is 0 genes, so only 39 of 156
-#              cells are computable. Fine for the pooled row, not for a table.
-#   "shared"   no per-pair filter: every gene of the DEG universe present in both.
-#              Complete, unbiased, but correlations are much weaker (|r| ~0.1-0.3)
-#              because they include genes with no effect in either contrast.
+# LD_X17b derives the available measures from E04c checkpoints without refitting.
+# Nominal p < 0.05 in both contrasts provides complete subcluster estimates and
+# matches the Results text.
 R_MEASURE = "nominal"
 
 ### source-specific configuration -------------------------------------------

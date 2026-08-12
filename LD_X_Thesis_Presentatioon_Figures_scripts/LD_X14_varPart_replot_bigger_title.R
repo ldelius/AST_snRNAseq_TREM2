@@ -19,20 +19,19 @@ mean_ord   = file.path(h_out, paste0(src, "_varPart_variance_expl_mean_ord.csv")
 for (f in c(by_gene, mean_ord)) if (!file.exists(f)) stop("Missing input: ", f)
 message("Using base: ", base, " | redrawing ", src)
 
-### the only thing being changed --------------------------------------------
-# No title: the caption carries it in the thesis. Set TITLE to a string to
-# restore it (TITLE_SIZE then applies).
+### plot settings ------------------------------------------------------------
+# The thesis caption supplies the title.
 TITLE      = NULL
-TITLE_SIZE = 20     # was the ggplot default (~13.2 at base_size 11)
-AXIS_SIZE  = 12     # axis text carries the figure now, so slightly larger
+TITLE_SIZE = 20
+AXIS_SIZE  = 12
 
 ### load ---------------------------------------------------------------------
 vp  = read_csv(by_gene, show_col_types = FALSE)
-ord = read_csv(mean_ord, show_col_types = FALSE)$covariate   # original column order
+ord = read_csv(mean_ord, show_col_types = FALSE)$covariate   # source column order
 if (!setequal(ord, names(vp)))
   stop("Covariates in the two CSVs do not match:\n  by_gene: ", paste(names(vp), collapse = ", "),
        "\n  mean_ord: ", paste(ord, collapse = ", "))
-vp = vp[, ord]        # keep the ordering the original figure used
+vp = vp[, ord]        # preserve source ordering
 message("  ", nrow(vp), " genes x ", ncol(vp), " covariates")
 
 ### draw ---------------------------------------------------------------------
@@ -42,7 +41,7 @@ big_title = theme(plot.title = element_text(size = TITLE_SIZE, face = "bold", hj
                   axis.title.y = element_text(size = AXIS_SIZE + 1))
 
 if (requireNamespace("variancePartition", quietly = TRUE)) {
-  message("  drawing with variancePartition::plotVarPart() (faithful to the original)")
+  message("  Drawing with variancePartition::plotVarPart()")
   # plotVarPart() sets its own title; NULL removes it rather than leaving the default
   p = variancePartition::plotVarPart(as.data.frame(vp)) + ggtitle(TITLE) + big_title
 } else {
@@ -69,7 +68,7 @@ ggsave(file.path(out_dir, paste0(script_ind, "varPart_variance_explained.pdf")),
 ggsave(file.path(out_dir, paste0(script_ind, "varPart_variance_explained.png")), p,
        width = W, height = H, dpi = 300)
 
-# the "max 20%" zoom version the original script also produced
+# Maximum-20% zoom.
 p20 = p + coord_cartesian(ylim = c(0, 20)) +
   ggtitle(if (is.null(TITLE)) NULL else paste0(TITLE, " (max 20%)"))
 ggsave(file.path(out_dir, paste0(script_ind, "varPart_variance_explained_max20.pdf")), p20,

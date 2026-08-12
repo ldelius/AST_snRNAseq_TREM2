@@ -58,7 +58,7 @@ median_overall = ct %>%
   dplyr::group_by(cellgroup) %>%
   dplyr::summarise(median_pct = 100 * median(fract_sample), n_samples = dplyr::n(), .groups = "drop")
 
-# per group, for reference if you want to note any group-level spread too
+# Group-specific medians.
 median_by_group = ct %>%
   dplyr::group_by(cellgroup, group) %>%
   dplyr::summarise(median_pct = 100 * median(fract_sample), n_samples = dplyr::n(), .groups = "drop")

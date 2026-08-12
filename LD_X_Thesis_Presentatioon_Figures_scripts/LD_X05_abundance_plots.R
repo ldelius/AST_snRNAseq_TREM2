@@ -10,11 +10,6 @@ base       = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2"
 b04_path   = file.path(base, "LD_B_AST_analysis_output/LD_B04a_v02_seur.qs")
 clust_csv  = file.path(base, "LD_B_AST_analysis_output/LD_B03a_cluster_assignment.csv")
 group_csv  = file.path(base, "data_TREM2_michael/A_input/group_tab.csv")
-# v05: identical models to v03; the only change is that run_contrasts() now also
-# keeps c_effect / c_lower / c_upper. New index so the v03 outputs (already used
-# in the current figures and tables) are not overwritten while this reruns.
-# This run writes into its own subfolder: LD_X05 emits ~40 CSVs and plots, which
-# otherwise bury the rest of the thesis-figure output directory.
 script_ind = "LD_X05_v05_"
 out_dir    = file.path(base, "LD_X_Thesis_Presentation_output", "LD_X05_v05_abundance")
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
@@ -242,18 +237,9 @@ save_plot(bracket_boxplot(ct_subtype, subtype_levels, sig_region_aj, "Subtype by
 
 message("Done. Abundance overviews, sccomp bracket boxplots and contrast tables written to ", out_dir)
 
-################################################################################
-# NEW: donor-level sccomp (addresses pseudoreplication - 47 of 70 donors
-# contribute 2 brain-region samples each, so sample-level treats those
-# non-independent samples as independent observations). Aggregates counts to
-# one row per DONOR (summed across that donor's sample(s)), then reuses the
-# SAME run_contrasts()/plot_dodge()/bracket_boxplot() machinery as above for
-# consistency - the donor ID is put in a column literally called "sample" so
-# run_contrasts() (`.sample = sample`) works completely unchanged. BrainRegion
-# is dropped from the donor-level covariate set: it isn't a well-defined
-# single value for the 47 donors whose counts are pooled across both regions.
-# Purely additive - nothing above is modified or overwritten.
-################################################################################
+### donor-level sccomp -------------------------------------------------------
+# Aggregate regions per donor to avoid treating paired samples as independent.
+# BrainRegion is omitted because donors may contribute both regions.
 
 donor_col  = "BrainBankNetworkIDFormatted"
 samp_donor = grtab %>% dplyr::distinct(sample, donor = .data[[donor_col]])

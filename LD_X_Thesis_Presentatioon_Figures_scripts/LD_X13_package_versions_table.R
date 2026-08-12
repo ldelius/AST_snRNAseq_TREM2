@@ -1,6 +1,5 @@
 # LD_X13: Supplementary table of software-package versions.
 # Analysis-environment versions are retained when the table is rendered locally.
-# Versions are read from the environment because historical job logs disagree.
 
 library(tidyverse)
 

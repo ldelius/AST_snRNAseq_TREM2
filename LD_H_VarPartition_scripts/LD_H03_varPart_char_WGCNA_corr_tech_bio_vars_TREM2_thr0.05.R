@@ -53,7 +53,7 @@ if (is.null(bulk_data$vst_mat_corr)){
   stop("   !ERROR: bulk_data$vst_mat_corr not found - rerun LD_H02 first")
 }
 
-# the exact gene set Michael used
+# TREM2-associated gene set
 gene_set_name = "TREM2Variant_thr_0.05"
 if (!gene_set_name %in% names(bulk_data$varPart_analysis$var_genes)){
   stop("   !ERROR: '", gene_set_name, "' not in var_genes; available: ",
@@ -104,7 +104,7 @@ for (goi_set in unique(t1$gene_set)){
   GOI[[goi_set]] = t1$gene[t1$gene_set == goi_set]
 }
 
-### get marker gene sets (astrocyte subtypes; Michael used Microglia_subtypes)
+### get astrocyte-subtype marker gene sets
 
 t1 = read_csv(paste0(main_dir,"data_TREM2_michael/A_input/cell_type_markers_241219_w_astr_subtype_markers.csv"))
 t2 = t1[t1$level == "Astrocyte_subtypes",]
@@ -182,17 +182,10 @@ create_heatmap_annot = function(annot_df, annot_dim = c("column", "row"),
 
 
 #######################################
-# calculate WGCNA soft-thresholding power (ALIGNED TO MY F WGCNA SCRIPTS)
+# calculate WGCNA soft-thresholding power
 #######################################
-# Soft-power selection is matched EXACTLY to my F03a1/F03a2 WGCNA, so the
-# corrected (H) and less-corrected (F) analyses differ ONLY by the correction
-# level - not by the network-construction method:
-#  - pickSoftThreshold uses the DEFAULT (unsigned) networkType, as in F
-#  - power = first power with signed scale-free R^2 > 0.8, floored at 6 (F's rule)
-#  - blockwiseModules below already matches F (networkType = "signed", deepSplit 2,
-#    minModuleSize 30, maxBlockSize 20000, mergeCutHeight 0.25, numericLabels)
-# (Earlier H03 versions used a signed pickSoftThreshold + a sample-size floor of 12;
-#  that was changed to match F for a clean F-vs-H comparison.)
+# Match the F03 network construction so the analyses differ only in correction:
+# use the first power with signed scale-free R2 > 0.8, with a minimum of 6.
 
 message("\n\n          *** Calculate soft-thresholding power... ", Sys.time(),"\n\n")
 
@@ -201,10 +194,10 @@ allowWGCNAThreads()          # allow multi-threading (optional)
 # Choose a set of soft-thresholding powers
 powers = c(c(1:10), seq(from = 12, to = 20, by = 2))
 
-# Call the network topology analysis function on MY corrected matrix
+# Network topology analysis on the corrected matrix.
 sft = pickSoftThreshold(
-  input_mat,                 # <= Input data (my vst_mat_corr, TREM2 thr0.05 genes)
-  powerVector = powers,      # networkType left at DEFAULT (unsigned) to match my F scripts
+  input_mat,                 # corrected VST matrix, TREM2 threshold 0.05 genes
+  powerVector = powers,      # unsigned to match the F scripts
   verbose = 5
 )
 
@@ -213,8 +206,7 @@ sft = pickSoftThreshold(
 t1 = as_tibble(sft$fitIndices)
 t1$signed_R2 = -sign(t1$slope)*t1$SFT.R.sq
 
-### power choice ALIGNED TO MY F WGCNA scripts (F03a1/F03a2) for comparability:
-### first power reaching signed scale-free R^2 > 0.8, floored at 6.
+### first power reaching signed scale-free R2 > 0.8, with a minimum of 6
 n_samples = nrow(input_mat)
 wgcna_power = t1$Power[t1$signed_R2 > 0.8][1]
 if (wgcna_power < 6){ wgcna_power = 6 }
@@ -254,7 +246,7 @@ qsave(bulk_data, file = paste0(out_dir,script_ind, "bulk_data.qs"))
 #######################################
 # calculate WGCNA with selected soft-thresholding power
 #######################################
-# blockwiseModules parameters kept EXACTLY as Michael's G04a31 (for comparability)
+# Parameters match G04a31 for comparability.
 
 temp_cor <- cor
 cor <- WGCNA::cor         # Force it to use WGCNA cor function (fix a namespace conflict issue)
@@ -485,19 +477,9 @@ dev.off()
 
 
 
-######################################################################
-### Fit variance partition model for module activity
-######################################################################
-
 ### Fit variance partition model (module activity)
-### NB: variancePartition::fitExtractVarPartModel is BROKEN in this environment
-### (variancePartition 1.32.5 imports lme4::findbars, which lme4 2.0 removed/moved
-### to reformulas). On the module matrix it fails for some modules and SILENTLY
-### DROPS them (we saw only 4 of 8 returned) - the same incompatibility that hit
-### H02. We therefore compute the per-module variance fractions directly: fit each
-### module with lme4::lmer (its own parser works fine) and decompose with
-### variancePartition::calcVarPart() on the FITTED model (post-fit, so it does not
-### re-trigger findbars). All modules are reported; any genuine failure is flagged.
+# fitExtractVarPartModel is incompatible with lme4 >= 2.0 and may drop modules.
+# Fit each module with lmer and apply calcVarPart to the fitted model instead.
 
 meta = bulk_data$meta[colnames(mod_act_mat),]
 form_full = bulk_data$varPart_analysis$form_full

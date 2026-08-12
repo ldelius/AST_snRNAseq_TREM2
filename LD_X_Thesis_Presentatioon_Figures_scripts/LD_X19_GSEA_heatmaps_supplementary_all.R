@@ -11,8 +11,7 @@ base_candidates = c("/rds/general/user/lvd25/home/AST_scRNAseq_TREM2",
 base = base_candidates[dir.exists(base_candidates)][1]
 if (is.na(base)) stop("Neither RDS path is reachable - is the share mounted?")
 ### inherit results-figure definitions ---------------------------------------
-# NB: the eval below also sets base/out_dir/script_ind (to LD_X10b_'s values), so
-# this script's own paths and prefix are (re)assigned AFTER it, not before.
+# The evaluated definitions reset base, out_dir and script_ind; reassign them below.
 x10b = file.path(base, "LD_X_Thesis_Presentatioon_Figures_scripts",
                  "LD_X10b_GSEA_heatmap_combined_prep.R")
 if (!file.exists(x10b)) stop("Missing: ", x10b)

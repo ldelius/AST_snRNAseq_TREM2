@@ -1,12 +1,10 @@
-# LD_X07_v04: X07 v03 with larger, darker quadrant labels.
-# Hand-added annotation boxes from the v03 PDF are not reproduced.
+# LD_X07_v04: Combined DEG-count and pooled log2FC concordance figure.
 
 library(tidyverse)
 library(qs)
 library(patchwork)
 
-# project folder is AST_snRNAseq_TREM2; older scripts still hardcode the
-# pre-rename AST_scRNAseq_TREM2 - take whichever actually exists
+# Accept either project-directory spelling.
 base       = c("/rds/general/user/lvd25/home/AST_snRNAseq_TREM2",
                "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2")
 base       = base[dir.exists(base)]

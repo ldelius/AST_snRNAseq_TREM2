@@ -1,12 +1,6 @@
-# LD_X02: Results Figure 1 - overview UMAPs in one consistent style.
-#   (a) whole dataset coloured by cell type        (from B01 / scFlow LIGER embedding)
-#   (b) astrocytes coloured by cell_type (subtype) (from B04 / Harmony re-embedding)
-#   (c) astrocytes coloured by cluster_name        (from B04 / Harmony re-embedding)
-# The three panels use DIFFERENT embeddings (by design) but are rendered identically.
-#
-# NB: needs qs + Seurat (run on the HPC R, as for the other heavy B scripts).
-#     Objects are large (B01 ~1.5 GB, B04 ~6.7 GB); they are loaded one at a time
-#     and freed before the next, so peak memory ~ the larger single object.
+# LD_X02: Overview UMAPs for the whole dataset and astrocyte families/subclusters.
+# The whole-dataset panel uses the B01 LIGER embedding; astrocyte panels use B04
+# Harmony. Large objects are loaded sequentially to limit peak memory.
 
 library(tidyverse)
 library(qs)
@@ -67,12 +61,7 @@ theme_umap = function() theme_classic(base_size = 11) +
         legend.text     = element_text(size = 7),
         legend.key.size = unit(3, "mm"))
 
-# categorical palette generator - colourblind-safe throughout. Up to 8 categories
-# (panel b) use the Okabe-Ito palette; beyond that (panels a & c, many clusters)
-# fall back to the viridis scale, which is perceptually uniform and validated for
-# deuteranopia/protanopia/tritanopia. This replaces the old evenly-spaced HCL hue
-# rotation (scales::hue_pal), which is not colourblind-safe (adjacent hues can land
-# on the red/green pair that red-green CVD can't distinguish).
+# Use Okabe-Ito for up to eight categories and viridis for larger sets.
 okabe_ito = c("#E69F00", "#56B4E9", "#009E73", "#F0E442",
               "#0072B2", "#D55E00", "#CC79A7", "#000000")
 make_pal = function(levels, cb = FALSE) {
@@ -142,8 +131,6 @@ message("  astrocyte subclusters (cluster_name): ", length(unique(as.character(d
         "  | subtypes (cell_type): ", length(unique(as.character(df_ast$cell_type))))
 
 ### assemble one-row figure --------------------------------------------------
-# label = TRUE prints each category name on top of its cluster (at the centroid);
-# show_legend = FALSE then drops the now-redundant legend. Flip either per panel.
 pa = mk_umap(df_all, "cell_type",    "All cell types",        label = TRUE, show_legend = FALSE,
              emphasise = "Astrocytes")
 pb = mk_umap(df_ast, "cell_type",    "Astrocyte families",   label = TRUE, show_legend = FALSE, pal_override = astro_family_pal)

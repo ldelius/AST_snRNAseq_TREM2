@@ -18,7 +18,6 @@ library(DOSE) # GO enrichment
 library(org.Hs.eg.db) # GO enrichment
 library(ggrepel)
 library(presto)
-# the not called packages might be dependencies from other packages, therefore i keep them for now
 
 ### define directories and script index
 
@@ -26,7 +25,7 @@ main_dir = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2/"
 setwd(main_dir)
 
 #specify script/output index as prefix for file names
-script_ind = "LD_B04a_v02_" # this is version 02 now, cause I changed cluster s1 from SLC1A2 to GFAP.
+script_ind = "LD_B04a_v02_"
 
 #specify output directory
 out_dir = paste0(main_dir,"LD_B_AST_analysis_output/")
@@ -49,7 +48,7 @@ seur$pctPHF1PositiveArea = gr_tab$pctPHF1PositiveArea[match(seur$sample, gr_tab$
 clust_tab = read_csv(paste0(out_dir,"LD_B03a_cluster_assignment.csv")) # adds the CSV with manually assigned cluster names
 
 #select subcluster resolution for further analyses
-clust_res = 0.3 # adjust with the resolution I think fits best for further analyses
+clust_res = 0.3
 
 ### get marker gene panels
 
@@ -61,7 +60,7 @@ GOI$subtype_markers = t1$gene[t1$level %in% c("Astrocyte_subtypes")]
 t1 = read_csv(paste0(main_dir,"data_TREM2_michael/A_input/Transcription Factors hg19 - Fantom5_21-12-21.csv"))
 GOI$TF = t1$Symbol
 
-### get all subtype markers from Gazestani et al., 2023, Manucso et al., 2024 --> later used to copare our astrocyte subclusters
+### get published astrocyte-subtype markers
 
 subtype_markers = list()
 
@@ -160,7 +159,7 @@ plot_sccomp_intervals = function(sccomp_res, title_label = ""){
 ###########################################################
 # save cluster//cell_type/cell_class labels to dataset
 ###########################################################
-# maps the Seurat clusters (at resolution 0.3) to the manually assigned cluster names and cell types using table from LD_B03a
+# Map resolution-0.3 clusters to LD_B03a labels.
 DefaultAssay(seur) = "SCT"
 
 #add clusters with default resolution
@@ -393,7 +392,6 @@ t2 = t1[order(t1$cluster, -t1$avg_log2FC),]
 seur_markers = t2
 
 write_csv(seur_markers, file = paste0(out_dir,script_ind, "Seurat_markers.csv"))
-# tells us for each of the clusters, which genes are specifically upregulated in that cluster relative to the other astrocytes, and by how much
 
 ###plot top10 markers per cluster (max 200 cells/cluster)
 
@@ -421,9 +419,7 @@ for (cl in cluster_names){
 seur_plot = seur[, v1]
 
 
-#plot
-# this step serves as a visual quality check. It shows the top markers for 200 cells per cluster (one column per cell).
-# if there is a biological meaningfuls distinction, we should see a clear pattern of marker expression across clusters.
+# Marker-expression quality check using up to 200 cells per cluster.
 p1 = DoHeatmap(seur_plot, group.by = "cluster_name", slot = "data", 
                features = top_markers$gene) + NoLegend()
 
@@ -445,8 +441,6 @@ dev.off()
 
 
 ### Gene Ontology (GO) analysis
-# standardised database for gene functions, and biological processes
-# uses all markers from the filtered FindAllMarkers output to check "are there any biological processes that appear in this gene list more often than expected by chance?
 GO_list = list()
 GO_results_tab = NULL
 
@@ -563,7 +557,6 @@ dev.off()
 #############################################################################
 # cluster abundance quantification
 #############################################################################
-# quantifies how many cells for each sample end up in each ubcluster to answer "Are certain astrocyte subtypes more or less abundant in certain experimental groups?"
 seur = seur0
 
 meta = seur@meta.data
@@ -662,7 +655,6 @@ gc()
 ###########################################################
 # sccomp differential cell cluster abundance analysis
 ###########################################################
-# adds statistics on the abundance testing form just before
 seur$group = factor(seur$group, levels = gr) #required to fix order of groups
 
 sccomp_result =
@@ -685,8 +677,8 @@ if (!"factor" %in% names(sccomp_result) & "parameter" %in% names(sccomp_result))
 write_csv(sccomp_result, paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group.csv"))
 
 
-### credible interval estimates plot (originally plot_1D_intervals)
-# try original function, save to _orig file
+### credible interval estimates plot
+# sccomp helper output
 tryCatch({
   pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_orig.pdf"),
       width = 8, height = 5)
@@ -705,13 +697,13 @@ if (!is.null(p)) print(p)
 dev.off()
 
 
-### boxplot for significant clusters (originally sccomp_boxplot)
+### boxplot for significant clusters
 t1 = sccomp_result
 t2 = t1[!is.na(t1$factor),]
 t3 = t2[t2$c_FDR<0.05,]
 
 if (nrow(t3)>0){
-  # try original function, save to _orig file
+  # sccomp helper output
   tryCatch({
     pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_orig.pdf"),
         width = 8, height = 8)
@@ -824,8 +816,6 @@ tryCatch({
 ###########################################################
 # plot cluster abundance vs plaque_dens by TREM2Variant
 ###########################################################
-# this section asks whther the abundance of certain clusters correlates with plaque density, and whether this correlation is different between TREM2 variant carriers and non-carriers
-# for each clsuter we see: as plaque pathology increases, does the cluster ge more or less abundant? and does this differ between the variants?
 t1 = stat_tab
 
 t1$plaque_dens = gr_tab$plaque_dens[match(t1$sample, gr_tab$sample)]
@@ -862,7 +852,6 @@ dev.off()
 ###########################################################
 # plot cluster abundance vs PHF1 by TREM2Variant
 ###########################################################
-# same as just above but for tau pathology
 t1 = stat_tab
 
 t1$pctPHF1PositiveArea = gr_tab$pctPHF1PositiveArea[match(t1$sample, gr_tab$sample)]
@@ -962,8 +951,8 @@ if (!"factor" %in% names(sccomp_result) & "parameter" %in% names(sccomp_result))
 write_csv(sccomp_result, paste0(out_dir,script_ind,"sccomp_cell_abundance_by_TREM2Variant_vs_plaque_dens.csv"))
 
 
-### credible interval estimates plot (originally plot_1D_intervals)
-# try original function, save to _orig file
+### credible interval estimates plot
+# sccomp helper output
 tryCatch({
   pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_plaque_dens_orig.pdf"),
       width = 8, height = 5)
@@ -982,13 +971,13 @@ if (!is.null(p)) print(p)
 dev.off()
 
 
-### boxplot for significant clusters (originally sccomp_boxplot)
+### boxplot for significant clusters
 t1 = sccomp_result
 t2 = t1[!is.na(t1$factor),]
 t3 = t2[t2$c_FDR<0.05,]
 
 if (nrow(t3)>0){
-  # try original function, save to _orig file
+  # sccomp helper output
   tryCatch({
     pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_plaque_dens_orig.pdf"),
         width = 8, height = 8)
@@ -1022,7 +1011,6 @@ if (nrow(t3)>0){
 ###########################################################
 # sccomp differential cell cluster abundance analysis by TREM2Variant vs plaque_dens corrected for APOE and CD33
 ###########################################################
-# same as sccomp just before but adds correction for APOE and CD33 genotype
 seur = seur0
 
 seur$TREM2Variant = factor(seur$TREM2Variant, levels = unique(gr_tab$TREM2Variant))
@@ -1050,8 +1038,8 @@ if (!"factor" %in% names(sccomp_result) & "parameter" %in% names(sccomp_result))
 write_csv(sccomp_result, paste0(out_dir,script_ind,"sccomp_cell_abundance_by_TREM2Variant_vs_plaque_dens_corr_APOE_CD33.csv"))
 
 
-### credible interval estimates plot (originally plot_1D_intervals)
-# try original function, save to _orig file
+### credible interval estimates plot
+# sccomp helper output
 tryCatch({
   pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_estimates_TREM2Variant_vs_plaque_dens_corr_APOE_CD33_orig.pdf"),
       width = 8, height = 5)
@@ -1070,13 +1058,13 @@ if (!is.null(p)) print(p)
 dev.off()
 
 
-### boxplot for significant clusters (originally sccomp_boxplot)
+### boxplot for significant clusters
 t1 = sccomp_result
 t2 = t1[!is.na(t1$factor),]
 t3 = t2[t2$c_FDR<0.05,]
 
 if (nrow(t3)>0){
-  # try original function, save to _orig file
+  # sccomp helper output
   tryCatch({
     pdf(file = paste0(out_dir,script_ind,"sccomp_cell_abundance_by_cluster_group_boxplot_TREM2Variant_vs_plaque_dens_corr_APOE_CD33_orig.pdf"),
         width = 8, height = 8)

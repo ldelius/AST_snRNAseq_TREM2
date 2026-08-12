@@ -15,17 +15,16 @@ if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 script_ind = "LD_X18_"
 if (!file.exists(go_csv)) stop("Missing input: ", go_csv)
 
-### knobs --------------------------------------------------------------------
-TOP_N  = 10      # terms per module (original: 10)
-ROW_IN = 0.22    # inches per row (original: ~0.15)
-LAB_PT = 9       # y-axis label size (original: theme default, ~8.8 at base 11)
+### settings -----------------------------------------------------------------
+TOP_N  = 10      # terms per module
+ROW_IN = 0.22    # inches per row
+LAB_PT = 9       # y-axis label size
 
 ### data ---------------------------------------------------------------------
-# same selection as the original: Count > 1, then the first TOP_N rows per module
-# (the GO table is already ordered by significance within module)
+# The GO table is ordered by significance within module.
 go = read_csv(go_csv, show_col_types = FALSE) %>% filter(Count > 1)
 
-# Replicate the original's row order exactly: it loops over the modules in the
+# Preserve input row order by looping over modules in the
 # order they appear in the GO table (NOT alphabetically - dplyr::group_by would
 # give M0, M1, M11, M12, ... M2, which reshuffles the y axis) and takes the first
 # TOP_N rows of each.
@@ -34,14 +33,11 @@ t2 = do.call(rbind, lapply(unique(go$module), function(m) {
   if (nrow(d) > TOP_N) d[seq_len(TOP_N), ] else d
 }))
 
-mods = unique(t2$module)   # x-axis order: as in the GO table, as the original
+mods = unique(t2$module)   # input order
 
 ### module colours -----------------------------------------------------------
-# The original used the raw WGCNA colour names (turquoise/blue/brown/...), which
-# are arbitrary labels and clash with the thesis palette. Replaced here with the
-# thesis convention for categorical identity: viridis beyond 8 categories, as in
-# LD_X02 (cluster identity) and LD_X10b (Hallmark groups). Viridis is also kept
-# clear of the blue/orange used for signed quantities elsewhere.
+# Use viridis for categorical module identity, separate from the blue/orange
+# scale used for signed quantities.
 # M0 stays grey: in WGCNA, module 0 is the unassigned ("grey") set, not a real
 # module, so it should read as background rather than as one colour among many.
 mods_real = setdiff(mods, "M0")
@@ -50,9 +46,7 @@ pal = set_names(scales::viridis_pal(option = "viridis", begin = 0.05, end = 0.92
 if ("M0" %in% mods) pal = c(M0 = "grey70", pal)
 pal = pal[mods]
 
-# NOT reversed: ggplot puts the first level of a discrete scale at the BOTTOM, and
-# the original passed limits = unique(t2$Description) - so M0's terms sit at the
-# bottom of the axis and the last module's at the top.
+# Keep the first input term at the bottom of the discrete axis.
 t2 = t2 %>% mutate(module = factor(module, levels = mods),
                    Description = factor(Description, levels = unique(Description)))
 
@@ -78,7 +72,4 @@ ggsave(file.path(out_dir, paste0(script_ind, "WGCNA_GO_dotplot_", suffix, ".pdf"
 ggsave(file.path(out_dir, paste0(script_ind, "WGCNA_GO_dotplot_", suffix, ".png")),
        p, width = W, height = H, dpi = 300, limitsize = FALSE)
 
-message("Done. ", n_terms, " terms x ", length(mods), " modules, ",
-        W, " x ", round(H, 1), " in (", ROW_IN, " in/row, labels ", LAB_PT, " pt).",
-        if (H > 11.7) "  NB: taller than an A4 page." else "",
-        " Outputs in: ", out_dir)
+message("Done. Outputs in: ", out_dir)

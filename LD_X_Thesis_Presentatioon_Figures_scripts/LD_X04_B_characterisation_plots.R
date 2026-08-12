@@ -101,12 +101,6 @@ ggsave(file.path(out_dir, paste0(script_ind, "Green24_module_score_dotplot.png")
        p_green, width = 8, height = 7, dpi = 300)
 message("Plot 1 (Green24 dot plot) written.")
 
-# NB: the "does the state<->subcluster mapping survive removing SLC1A2/GFAP/CHI3L1
-# from the state signatures" sensitivity check now lives in its own script,
-# LD_X04c_green_state_LOO_sensitivity.R, so it can be run without also paying for
-# the FindAllMarkers/GO section below (that's what was hitting the OnDemand
-# session memory limit).
-
 ### per-subcluster abundance -------------------------------------------------
 # "overcluster" = transcriptomic subtype (cell_type: AST_SLC1A2 / GFAP / CHI3L1).
 abund = seur@meta.data %>%
@@ -172,8 +166,7 @@ make_go_dotplot = function(res, clusters, n_terms, suffix, title, exclude_terms 
   # plotting data = every significant (subcluster, term) pair among the shown terms
   pdat = res %>% dplyr::filter(Description %in% terms_show)
   if (!is.null(exclude_terms)) {
-    # drop specific terms (chosen by eye from the un-curated plot, not re-ranked),
-    # then drop any subcluster left with no terms at all (e.g. GFAP_s1)
+    # Remove selected generic terms without reranking and omit empty subclusters.
     pdat = pdat %>% dplyr::filter(!Description %in% exclude_terms)
     clusters = clusters[clusters %in% unique(as.character(pdat$Cluster))]
     terms_show = terms_show[!terms_show %in% exclude_terms]
@@ -250,9 +243,7 @@ sig_clusters = cluster_names[cluster_names %in% unique(as.character(res$Cluster)
 make_go_dotplot(res, sig_clusters, 5, "GO_top5_all_sig_subclusters",
                 "Top-5 GO BP terms: subclusters with significant enrichment")
 
-# curated version of the plot above: same top-5-per-subcluster term selection,
-# with a hand-picked set of less-informative/generic terms deleted (not re-ranked),
-# and any subcluster left with zero terms dropped from the x-axis. No header.
+# Curated top-five terms after removing selected generic terms without reranking.
 curated_exclude_terms = c(
   "muscle contraction",
   "muscle system process",

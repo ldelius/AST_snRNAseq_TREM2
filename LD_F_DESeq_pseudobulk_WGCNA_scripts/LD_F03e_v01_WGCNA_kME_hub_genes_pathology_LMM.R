@@ -23,13 +23,12 @@ dir.create(out_dir, showWarnings = FALSE)
 script_ind = "LD_F03e_v01_"
 
 
-### load F03c v02 checkpoint (already has input_mat, network, mod_gene_tab,
-### mod_eigengene_mat, meta, GO_results - nothing needs recomputing to get these)
+### load F03c v02 checkpoint
 
 bulk_data = qread(file = paste0(in_dir, "LD_F03c_v02_bulk_data.qs"))
 
 mod_gene_tab = bulk_data$wgcna$mod_gene_tab
-mods         = unique(mod_gene_tab$module)          # sorted by module_number already
+mods         = unique(mod_gene_tab$module)
 me_mat       = bulk_data$wgcna$mod_eigengene_mat     # modules x cluster_samples
 meta         = bulk_data$meta
 meta_lmm     = meta[match(colnames(me_mat), meta$cluster_sample), ]

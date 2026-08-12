@@ -36,7 +36,7 @@ seur_mic = qread(file = paste0(main_dir, "data_TREM2_michael/B_load_from_scflow_
 # 2. verify RNA data not yet log-normalised in either Seurat
 ###########################################################
 
-# For CellChat I want to use log-normalised counts in the RNA data layer as recommended by CellChat website.
+# CellChat uses log-normalised counts from the RNA data layer.
 # Our upstream pipelines used SCT, so the RNA data layer should be empty here.
 # However, double checking here.
 
@@ -119,7 +119,7 @@ if (length(mismatched_covars) > 0){
 ###########################################################
 
 # Adding cell_type_joint as an explicit column with AST and MIC, so that downstream
-# we can filter cells by source 
+# Record source lineage for downstream filtering.
 
 seur_ast$cell_type_joint = "AST"
 seur_mic$cell_type_joint = "MIC"
