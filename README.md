@@ -1,4 +1,4 @@
-# Carriers of the TREM2 Risk Variants R47H and R62H Show Lower Astrocyte Metabolic and Proteostatic Gene Expression in Alzheimer's Disease
+# Single-nucleus transcriptomic analysis of astrocyte responses to Alzheimer’s disease in human TREM2 R47H and R62H carriers
 ### An MRes Thesis Project (Biomedical Research - Data Science, Imperial College London)
 
 ## Abstract
