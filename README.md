@@ -196,7 +196,8 @@ The G02 and G03 scripts use CellChat (1) with G01 preparing their inputs. Cell-c
 
 ## Reproducibility
 
-- Analyses were run in R on the Imperial College HPC service.
+- Analyses were run in R v4.3.3 on the Imperial College HPC service.
+- Figure scripts were partly run locally using R v4.5.1.
 - The PBS submission wrapper is provided in [`qsub_cx3_R_R43_240426_1c32g8h.sh`](qsub_cx3_R_R43_240426_1c32g8h.sh). It loads Miniforge and activates the `R43_240426` environment.
 - Package requirements are declared through `library()` calls within each script. No package lockfile is included.
 - Random seeds are set within scripts where stochastic procedures are used.
