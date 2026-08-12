@@ -123,7 +123,9 @@ Thesis status is given after each analysis description.
 
 The G02 and G03 scripts use CellChat (1) with G01 preparing their inputs. Cell-cell communication analysis is not included in the submitted thesis. For future work and exploration will adapt LIANA (2), replacing CellChat. The G workflow also depends on microglial objects not included in this repository.
 
+#### References
 1: Jin S, Guerrero-Juarez CF, Zhang L, Chang I, Ramos R, Kuan C-H, et al. Inference and analysis of cell-cell communication using CellChat. *Nature Communications*. 2021;12:1088. doi:10.1038/s41467-021-21246-9.
+
 2: Dimitrov D, Türei D, Garrido-Rodriguez M, Burmedi PL, Nagai JS, Boys C, et al. Comparison of methods and resources for cell-cell communication inference from single-cell RNA-Seq data. *Nature Communications*. 2022;13:3224. doi:10.1038/s41467-022-30755-0. 
 
 
