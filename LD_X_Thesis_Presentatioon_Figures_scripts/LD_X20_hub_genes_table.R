@@ -1,15 +1,4 @@
-# LD_X20: supplementary table of the top 10 WGCNA hub genes per module.
-#
-# DATA: LD_F03e_v01_Module_hub_genes_top10.csv, written by
-# LD_F03e_v01_WGCNA_kME_hub_genes_pathology_LMM.R, which ranks the genes of each
-# module by their own-module module membership (kME) and keeps the top 10.
-# That script reads LD_F03c_v02_bulk_data.qs, i.e. the DEG-seed WGCNA run.
-# M0 (the unassigned/grey set) is excluded there and so does not appear here.
-#
-# Layout: one row per module, the ten genes listed in rank order (highest kME
-# first). Modules as columns would be 15 columns wide and would not fit portrait.
-#
-# Cheap: reads one CSV, renders. Nothing recomputed.
+# LD_X20: Supplementary table of the top 10 WGCNA hub genes per module.
 
 library(tidyverse)
 

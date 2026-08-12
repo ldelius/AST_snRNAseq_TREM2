@@ -1,24 +1,5 @@
-# LD_X22: supplementary figure - GO biological processes per log2FC quadrant,
-# ALL astrocytes pooled (not per family).
-#
-# DATA: LD_X08_GO_quadrants_family_pooled_results.csv, written by
-# LD_X08_GO_quadrants_family_pooled_5covar.R. That script computes four scopes -
-# ALL_pooled, SLC1A2, GFAP, CHI3L1 - but only plots the three family ones. This
-# takes the ALL_pooled scope, which is the true pooled model from LD_E04c
-# (single DESeq2 fit across all subclusters with cluster_name as a covariate,
-# 5-covariate base), i.e. the same scope as the LD_X07 concordance panel.
-#
-# Nothing is recomputed: no enrichGO, no DESeq2, no .qs. Reads one CSV.
-#
-# COLOURS: grey -> black for -log10(adj. p), matching the curated GO figure
-# (LD_X04_v02 / LD_X15). GO over-representation here is magnitude-only - the
-# direction is already encoded by the quadrant - so an achromatic ramp is used
-# and the blue/orange hue family is left for genuinely signed quantities. This is
-# the only change from LD_X08's own styling.
-#
-# All four quadrants are always drawn. up_up has genes in every pair (362 / 479 /
-# 1044) but yields no enriched terms, so it appears as an empty column: that is a
-# result, not a missing category.
+# LD_X22: Pooled astrocyte GO enrichment by log2FC quadrant.
+# Empty quadrant columns indicate that no terms passed enrichment thresholds.
 
 library(tidyverse)
 

@@ -1,33 +1,9 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_F03e v01: WGCNA kME/hub genes + pathology LMM (COMPUTE): ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Lightweight companion to F03c v02: adds analyses that were requested for the",
-        "\n   thesis but did not exist in F03c v02, WITHOUT rerunning the expensive network",
-        "\n   construction (blockwiseModules) or GO enrichment. Everything below is computed",
-        "\n   from objects already saved in the F03c v02 checkpoint (input_mat, network$MEs,",
-        "\n   mod_eigengene_mat, mod_gene_tab, GO_results, meta).",
-        "\n",
-        "\n   This is the COMPUTE half only - it is the only part of this pair of scripts that",
-        "\n   needs to touch the 897MB F03c v02 checkpoint. All plotting lives in the sibling",
-        "\n   LD_F03e_v01_replot.R script, which reads only the small outputs written here",
-        "\n   (CSVs + a small 'replot_bundle.qs') and can be rerun in seconds, locally or on",
-        "\n   the HPC, without reloading the big checkpoint - use it for any plot-only tweak.",
-        "\n",
-        "\n   Adds:",
-        "\n     1) kME (module eigengene-based connectivity) for every gene x module, and a",
-        "\n        ranked top-10-per-module hub-gene table.",
-        "\n     2) Pathology-trait LMM, and 3) a re-fit of the TREM2Variant LMM, both using the",
-        "\n        CORRECTED random-effect structure eigengene ~ predictor + (1|cluster_name) +",
-        "\n        (1|BrainBankNetworkIDFormatted) + (1|sample). F03c v02's original '(1|sample)-",
-        "\n        only' LMM (and this script's own earlier version) mislabelled sample as donor-",
-        "\n        level: sample = donor x brain region (117 samples, 70 donors; 47/70 donors",
-        "\n        contribute both SSC and MTG), so '(1|sample)' alone leaves cross-region",
-        "\n        correlation within a donor unmodelled. Adding '(1|BrainBankNetworkIDFormatted)'",
-        "\n        fixes that. (CIRCULARITY caveat for TREM2 in F03c v02 still applies and is",
-        "\n        unaffected - these are DEG-seeded modules; this only changes the RE structure.)",
+        "# Start LD_F03e v01: WGCNA hub genes and donor-aware LMMs ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# Open packages necessary for analysis.
+# Donor and sample random intercepts account for paired brain regions within
+# donors. TREM2 associations remain descriptive because modules are DEG-seeded.
 library(qs)
 library(tidyverse)
 library(WGCNA)
@@ -59,9 +35,7 @@ meta         = bulk_data$meta
 meta_lmm     = meta[match(colnames(me_mat), meta$cluster_sample), ]
 
 
-######################################################################
-### 1) kME (module eigengene-based connectivity) + hub genes
-######################################################################
+### kME and hub genes --------------------------------------------------------
 
 message("\n\n   *Compute kME and hub-gene ranking \n")
 
@@ -100,16 +74,9 @@ write_csv(hub_genes,
          file = paste0(out_dir, script_ind, "Module_hub_genes_top10.csv"))
 
 
-######################################################################
-### 2) Donor-aware LMM per module x pathology trait
-### eigengene ~ trait + (1|cluster_name) + (1|BrainBankNetworkIDFormatted) +
-### (1|sample). sample = donor x brain region, not donor itself (see header),
-### so donor is added as its own random intercept on top of sample; since
-### sample IDs are globally unique across donors, "(1|donor)+(1|sample)" is
-### equivalent to properly nesting sample within donor, no relabelling needed.
-### This was not done at all in F03c v02, where the pathology side of the
-### module-trait screen was left as the pseudoreplicated Pearson correlation.
-######################################################################
+### donor-aware pathology LMMs -----------------------------------------------
+# Sample identifies donor-region combinations, so donor and sample intercepts
+# account for both cross-region donor correlation and sample-level variation.
 
 message("\n\n   *Donor-aware LMM per module x pathology trait \n")
 
@@ -173,13 +140,7 @@ write_csv(lmm_path,
          file = paste0(out_dir, script_ind, "Module_eigengene_pathology_LMM.csv"))
 
 
-######################################################################
-### 2b) TREM2Variant LMM, re-fit with the corrected random-effect structure
-### (adds (1|BrainBankNetworkIDFormatted) on top of F03c v02's original
-### (1|cluster_name) + (1|sample)). Mirrors F03c v02's own TREM2 LMM section
-### (omnibus F-test + pairwise vs-CV/vs-R47H contrasts) exactly, just with
-### the extra donor random intercept - not a re-derivation from scratch.
-######################################################################
+### donor-aware TREM2-variant LMMs -------------------------------------------
 
 message("\n\n   *TREM2Variant LMM, corrected random-effect structure \n")
 
@@ -283,11 +244,7 @@ if (!is.null(lmm_trem2_pairs) && nrow(lmm_trem2_pairs) > 0){
 }
 
 
-######################################################################
-### 3) Save a small "replot bundle" - everything the sibling replot
-### script needs, none of it large. Lets any plot-only change be
-### rerun in seconds without touching the 897MB F03c v02 checkpoint.
-######################################################################
+### save replot bundle -------------------------------------------------------
 
 message("\n\n   *Save small replot bundle \n")
 

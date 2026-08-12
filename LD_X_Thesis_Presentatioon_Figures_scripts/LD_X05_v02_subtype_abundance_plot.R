@@ -1,20 +1,6 @@
-# LD_X05_v02: cleaned-up subtype abundance boxplot, built from the per-sample
-# CSV that LD_X05_abundance_plots.R already wrote (LD_X05_abundance_by_subtype.csv).
-# No need to reload the Seurat object or rerun sccomp: nothing was significant
-# for the subtype-level contrasts either way (adjusted or unadjusted), so there
-# are no brackets to draw and the two model variants are visually identical -
-# this produces a single plot instead of duplicating it under _adj/_unadj.
-#
-# Changes vs. the original sig_subtype_adj/unadj plots:
-#   - no title, no caption (nothing significant to caveat, no model to disclose
-#     since this is now purely descriptive)
-#   - shared/fixed y-axis across the three subtype facets (previously free_y,
-#     which made SLC1A2 ~65-70%, GFAP ~25%, CHI3L1 ~5% look similarly variable)
-#   - y-axis label states the denominator explicitly
-#   - group labels shown without underscores ("Control CV" not "Control_CV")
-#   - colourblind-safe Okabe-Ito palette, same family used for the X02 UMAP /
-#     Green24 / GO panels elsewhere in the thesis
-#   - writes median subtype-fraction stats (overall, and per group) to CSV
+# LD_X05_v02: Descriptive subtype abundance plot from LD_X05 outputs.
+# A shared y-axis preserves differences in abundance among subtypes.
+# No brackets are drawn because no subtype-level contrasts were significant.
 
 library(tidyverse)
 

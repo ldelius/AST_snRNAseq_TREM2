@@ -1,19 +1,4 @@
-# LD_X05: Astrocyte abundance (fraction of sample, by group) - all abundance plots.
-#   For each grouping (all 18 subclusters / two-largest-per-subtype / subtypes /
-#   subtypes-by-region) this makes:
-#     (A) a descriptive dodged-bar overview (mean +- SD + per-sample points), and
-#     (B) a bracket boxplot annotated with sccomp differential-abundance contrasts.
-#
-# Statistics: sccomp_glm(~ 0 + group, contrasts = ...) - Bayesian composition
-#   model (sccomp 1.6, as B04). Contrasts:
-#     - every group vs Control_CV
-#     - AD risk variants vs AD_CV
-#     - AD risk variants vs each other
-#   Only SIGNIFICANT contrasts (FDR < 0.05) are drawn as brackets (labelled by
-#   FDR); the full contrast results are written to CSV ("excel list").
-#
-# DATA: LD_B04a_v02_seur.qs (metadata only). NB: sccomp fits a Stan model per
-#   grouping -> heavy/slow (~30-60 min, >=64 GB, 8 cores).
+# LD_X05: Astrocyte abundance plots and sccomp differential-abundance analyses.
 
 library(tidyverse)
 library(qs)

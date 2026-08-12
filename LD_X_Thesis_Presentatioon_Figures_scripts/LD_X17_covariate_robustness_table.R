@@ -1,27 +1,4 @@
-# LD_X17: supplementary table of log2FC concordance (Pearson r) under cumulative
-# covariate adjustment, for the pooled astrocyte model and each subcluster.
-#
-# This is the table version of the LD_X07 concordance figure: the figure shows
-# three contrast pairs at the base model, this shows how r behaves as Age, PMI and
-# Braak are added on top of the 5-covariate base, at every scope.
-#
-# SOURCE - pinned, not auto-latest:
-#   "E04c" (preferred) LD_E04c_effect_robustness_summary.csv. 5-covariate base,
-#          E02c DEG universe, r computed on genes with padj < 0.1 in BOTH
-#          contrasts - i.e. the same gene set the LD_X07 panel plots. Exists only
-#          after LD_E04c has been rerun with per-subcluster scopes.
-#   "E04a" (placeholder) LD_E04a_v01_effect_robustness_summary.csv. Same pseudobulk
-#          and, at the matched rungs, the same covariate SETS, but restricted to
-#          the OLD E02a2 DEG universe and using p < 0.05 (not padj < 0.1) for the
-#          "regulated in both" set. Structurally identical, numerically not
-#          comparable to the figure. Use only until the E04c rerun lands.
-#
-# Layout (portrait A4, no rotated page):
-#   Block 1  contrasts 1 and 2 side by side  (2 x 4 covariate columns)
-#   Block 2  contrast 3, rows split into two halves side by side
-# Cells are r only; gene counts go to a companion CSV.
-#
-# Cheap: tidyverse + flextable. Reads one CSV, computes nothing.
+# LD_X17: Log2FC concordance under cumulative covariate adjustment.
 
 library(tidyverse)
 

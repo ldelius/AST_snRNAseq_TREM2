@@ -1,32 +1,4 @@
-# LD_X10b: thesis-ready largest7 GSEA heatmaps (Hallmark + Green24), building
-# on the presentation ("PP") version's structural choices, with today's
-# thesis-wide colour/naming corrections applied on top. Still TWO SEPARATE
-# heatmap outputs at this stage - combining them into one figure comes later,
-# once both look right individually.
-#
-# Carried over from the PP version (content/structure, not colour):
-#   - "R47H vs R62H" comparison block dropped entirely
-#   - extended Hallmark term drop list (PP superset of the thesis drop list)
-#   - custom hand-picked Hallmark grouping (8 biological blocks, fixed order),
-#     replacing the official 9-category MSigDB family classification
-#   - bigger Green row-label font (13pt vs Hallmark's 8pt)
-#   - extra left padding so the rotated column labels don't clip
-#
-# Changed vs the PP version (today's thesis-wide corrections):
-#   - NES colour scale: red/blue -> orange/blue (#E69F00/#0072B2), matching
-#     the up/down convention used everywhere else in the thesis
-#   - Hallmark group colours: ColorBrewer Dark2 -> viridis(8). Plain Okabe-Ito
-#     would have reused the EXACT SAME hex as the NES scale above (blue/orange)
-#     for a completely different meaning (group identity) in the SAME figure -
-#     viridis keeps the same "thesis palette family" without that clash.
-#   - Green24 state labels: "AST1_homeostatic"/underscores/"disease_associated"
-#     -> "Ast1 homeostatic" / no underscores / "Ast10 AD-elevated" (matches the
-#     labels already fixed in LD_X04c / LD_X04_B / LD_X10 earlier this session)
-#   - output: RDS LD_X_Thesis_Presentation_output (standard convention for all
-#     X-series scripts), not a local-only Desktop folder (that was a temporary
-#     workaround in the PP version for an RDS-write outage, not needed now)
-#
-# DATA SOURCE: LD_E03c_GSEA_results.csv (written by LD_E03c_GSEA_5covar.R).
+# LD_X10b: Hallmark and Green24 GSEA heatmaps for the seven largest subclusters.
 
 library(tidyverse)
 library(ComplexHeatmap)
@@ -297,17 +269,8 @@ ht_green    = build_heatmap(ml[["user_def_sets"]], "Green")
 save_heatmap(ht_hallmark, paste0(out_dir, "/", script_ind, "GSEA_heatmap_largest7_Hallmark_FDR10_allsig"))
 save_heatmap(ht_green,    paste0(out_dir, "/", script_ind, "GSEA_heatmap_largest7_Green_FDR10_allsig"))
 
-################################################################################
-# Combined figure: Green (a) + Hallmark (b) side by side, EACH AT ITS EXACT
-# OWN STANDALONE SIZE (not resized/stretched to hit a target ratio) - per your
-# choice, "exact size" wins over a precise 45/55 split. Viewport widths/
-# heights are given in ABSOLUTE inches (ht_green$W/$H, ht_hallmark$W/$H), not
-# fractional ("npc"), which is what guarantees no stretching: a viewport
-# exactly the size of the content it holds renders that content at its true
-# natural size. Bottom-aligned: Green sits in the bottom portion of the
-# canvas (row 2), Hallmark spans the full canvas height (rows 1-2); the
-# space above Green (row 1, col 1) is left blank.
-################################################################################
+### combined Green and Hallmark heatmaps ------------------------------------
+# Absolute viewport dimensions preserve each panel's standalone size.
 
 actual_green_pct = round(100 * ht_green$W / (ht_green$W + ht_hallmark$W), 1)
 message("Combined figure: Green/Hallmark width ratio at exact standalone size = ",

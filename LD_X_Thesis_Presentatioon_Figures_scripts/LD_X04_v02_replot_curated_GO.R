@@ -1,8 +1,4 @@
-# LD_X04_v02_replot_curated_GO: re-draw ONLY the curated GO_top5_all_sig_subclusters
-# plot, from the already-written GO_top_terms_table.csv (LD_X04_B_characterisation_
-# plots.R writes this from `res`, i.e. the full compareCluster/enrichGO result).
-# No need to reload Seurat / rerun FindAllMarkers / rerun enrichGO for a pure
-# reordering + row-separator change. Cheap: tidyverse + ggplot2 only.
+# LD_X04_v02: Replot curated subcluster GO enrichment from saved results.
 
 library(tidyverse)
 

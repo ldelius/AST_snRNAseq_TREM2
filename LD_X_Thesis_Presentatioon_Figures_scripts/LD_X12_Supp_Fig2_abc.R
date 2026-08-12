@@ -1,28 +1,5 @@
-# LD_X12: Supplementary Figure 2 (panels a, b, c) - assembled as one figure.
-#   a: cell-type marker dot plot, ROUND-1 object at resolution 1.5. Clusters removed
-#      in LD_B03a are outlined in black, showing what the round-2 cleanup dropped.
-#   b: astrocyte UMAP (round 2) at clustering resolutions 0.2 / 0.3 / 0.5, side by
-#      side, justifying the chosen resolution. (No integration-QC panel.)
-#   c: astrocyte-subtype marker dot plot across the 18 labelled subclusters
-#      (replaces LD_B04a_v02_Cell_subset_markers_dotplot_clusters_labelled_size_adj).
-#      GFAP, SLC1A2 and CHI3L1 - the three genes the subcluster families are named
-#      after - are bold.
-#
-# TWO STAGES, so plotting never re-runs anything heavy:
-#   1. CACHE BUILD (once, on the HPC): loads the big Seurat objects and writes small
-#      summary files. Each is built ONLY if missing. Needs qs + Seurat.
-#        a:    LD_X03a_dotplot_data_res1.5.csv  from LD_B02a_seur.qs    (6.8 GB)
-#        b, c: LD_X12_umap_resolutions.rds  +  LD_X12_dotplot_subtype_markers.csv
-#              from LD_B04a_v02_seur.qs (6.3 GB) - ONE load serves both panels.
-#   2. PLOT (anywhere, incl. laptop): reads the caches and renders. No Seurat needed.
-# No clustering, integration or normalisation is ever recomputed.
-#
-# COLOURS (thesis-wide conventions, see LD_X02 / LD_X04c / LD_X10b):
-#   - continuous, diverging around 0: #0072B2 (low) -> grey90 -> #E69F00 (high)
-#   - categorical cluster identity: viridis (Okabe-Ito is reserved for <=8 groups,
-#     and its blue/orange would collide with the expression scale in panels a/c)
-# This replaces both Seurat's default DotPlot ramp and the scales::hue_pal()
-# rotation used in the older LD_X03, which is not colourblind-safe.
+# LD_X12: Supplementary marker plots and clustering-resolution UMAPs.
+# Cached summaries avoid reloading the large Seurat objects during plotting.
 
 library(tidyverse)
 library(patchwork)

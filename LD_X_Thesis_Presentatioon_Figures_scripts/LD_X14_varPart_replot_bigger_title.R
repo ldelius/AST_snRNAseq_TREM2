@@ -1,18 +1,4 @@
-# LD_X14: re-draw the LD_H01 variance-partition violin plot with a larger title.
-#
-# NOTHING IS REFITTED. The mixed model (lmer per gene, the expensive part) already
-# ran in LD_H01_pseudobulk_varPart_mixed_model.R; its full per-gene output is on
-# disk, so this script only re-plots that table.
-#
-# DATA: LD_H01_v02_varPart_variance_expl_by_gene.csv  (17,418 genes x 16 covariates,
-#       variance fractions 0-1) and LD_H01_v02_varPart_variance_expl_mean_ord.csv
-#       (covariate order used in the original figure).
-#
-# Drawing: uses variancePartition::plotVarPart() when that package is available
-# (the HPC / OnDemand R), so the figure is identical to the original except for the
-# title. On a laptop without variancePartition it falls back to an equivalent
-# ggplot redraw - same ordering, same geometry, but treat it as a reimplementation
-# and check it against the original PDF before using it.
+# LD_X14: Replot the LD_H01 variance-partition result with adjusted text sizing.
 
 library(tidyverse)
 

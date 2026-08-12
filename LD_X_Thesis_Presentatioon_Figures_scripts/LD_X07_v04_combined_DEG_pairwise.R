@@ -1,23 +1,5 @@
-# LD_X07_v04: identical to LD_X07_v03 except for two cosmetic changes to the
-# quadrant labels in panels b/c - larger (quad_size 2.6 -> 3.4) and darker
-# (grey40 -> grey25). Kept as a separate script/output index so the v03 PDF
-# already used in the thesis is not overwritten.
-# NB the four white annotation boxes ("Translation, ribosome biogenesis" etc)
-# are NOT produced here - they were added by hand to the exported v03 PDF, so
-# they will be absent from the v04 export and need re-adding.
-#
-# LD_X07_v03_combined_DEG_pairwise: combines (A) the DEG-count summary and
-# (B) the pooled log2FC pairwise-concordance scatter into one figure. (B) is
-# the important panel; (A) is de-emphasised - compact, no title, arranged
-# side by side (not stacked) so it stays SHORT rather than tall, sitting as a
-# narrow strip above (B).
-#
-# Cheap/lightweight - reuses:
-#   (A) the light CSVs LD_X07_pseudobulk_DESeq2_figures_5covar.R already wrote
-#       (no Seurat, no 3.2GB E02c object)
-#   (B) the exact panel code from LD_X07_v02_replot_concordance_pooled_main.R
-#       (reads LD_E04c_bulk_data.qs, ~48MB - light, no DESeq2 refit)
-# Neither touches the ~3.2GB per-subcluster object or Seurat at all.
+# LD_X07_v04: X07 v03 with larger, darker quadrant labels.
+# Hand-added annotation boxes from the v03 PDF are not reproduced.
 
 library(tidyverse)
 library(qs)
@@ -41,13 +23,10 @@ for (p in c(e04c_path, e02c_deg_genes_csv, clust_csv)) if (!file.exists(p)) stop
 clust_tab     = read_csv(clust_csv, show_col_types = FALSE)
 cluster_order = unique(clust_tab$cluster_name)
 
-################################################################################
-# Panel A: DEG counts, compact - side by side (not stacked), no title/caption,
-# smaller text. Same data/definition as LD_X07 Part A (E02c, 5-covariate).
-################################################################################
+### Panel A: DEG counts ------------------------------------------------------
 
 deg_wide = read_csv(e02c_deg_genes_csv, show_col_types = FALSE)
-# per Michael: no TF/other differentiation in this plot (up/down only)
+# Transcription factors are included in the up/down totals.
 
 comp_tags = c(
   "TREM2_CV_AD_vs_Control" = "AD vs Control (CV only)",
@@ -140,11 +119,7 @@ p_deg = ggplot(deg_long, aes(cluster, n_plot, fill = direction)) +
   deg_theme_compact +
   labs(tag = "a")
 
-################################################################################
-# Panel B: pooled log2FC pairwise concordance - exact panel from
-# LD_X07_v02_replot_concordance_pooled_main.R (already cleaned: no title, no
-# caption, merged "Discordant" legend, single-row bottom legend)
-################################################################################
+### Panel B: pooled log2FC pairwise concordance ------------------------------
 
 DOT = 0.6
 # axis labels state the subset each contrast is restricted to: "AD vs Control"
@@ -256,9 +231,7 @@ p_pairwise = wrap_plots(b1, nrow = 1, guides = "collect") &
   theme(legend.position = "bottom") &
   guides(colour = guide_legend(nrow = 1, override.aes = list(size = 3)))
 
-################################################################################
-# Combine: (a) compact DEG strip on top, (b/c) pairwise plot below, dominant
-################################################################################
+### combine panels -----------------------------------------------------------
 
 # tags are set manually per-panel (mk_deg_panel = "a" above; b1 panels =
 # "b"/""/"c" above), so no tag_levels here - that would try to auto-number

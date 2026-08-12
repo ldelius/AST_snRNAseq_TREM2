@@ -1,28 +1,5 @@
-# LD_X19: SUPPLEMENTARY versions of the GSEA NES heatmaps (Hallmark + Green24).
-#
-# Identical in style to the results figure (LD_X10b) - same orange/blue NES scale,
-# same comparison blocks with titles, same cluster names underneath, same stripped
-# row labels ("HALLMARK_" and the Green state prefixes removed), Green rows
-# hierarchically clustered, Hallmark rows split into the curated groups.
-#
-# TWO DIFFERENCES, both deliberate:
-#   1. ALL comparisons: every subcluster, and all five contrast blocks - the three
-#      in the results figure plus R47H-vs-R62H and the subcluster-identity contrast.
-#   2. ALL significant terms, i.e. hallmark_drop_terms is NOT applied.
-#      19 of the 49 significant Hallmark terms fall outside the 8 curated blocks
-#      (17 are the ones the results figure drops, 2 were never grouped). They are
-#      collected into a 9th block, "Other", placed last.
-# (The results figure omits those last two; the supplement includes them.)
-
-
-#
-# HOW IT STAYS IN SYNC: rather than copying LD_X10b's curated groups, labels and
-# drawing code, this script evaluates LD_X10b UP TO (but not including) its first
-# build/draw call, inheriting every definition, then overrides only the two things
-# above. So a change to the curated grouping or the colour scale in LD_X10b
-# automatically reaches this figure, and neither script writes the other's files.
-#
-# Cheap: reads one CSV, draws two heatmaps. No DESeq2, no fgsea.
+# LD_X19: Supplementary GSEA heatmaps with all subclusters, comparisons and
+# significant terms. Plot definitions are inherited from LD_X10b.
 
 library(tidyverse)
 library(ComplexHeatmap)
@@ -33,7 +10,7 @@ base_candidates = c("/rds/general/user/lvd25/home/AST_scRNAseq_TREM2",
                     "/Volumes/lvd25/home/AST_scRNAseq_TREM2")
 base = base_candidates[dir.exists(base_candidates)][1]
 if (is.na(base)) stop("Neither RDS path is reachable - is the share mounted?")
-### 1. inherit everything from the results-figure script ---------------------
+### inherit results-figure definitions ---------------------------------------
 # NB: the eval below also sets base/out_dir/script_ind (to LD_X10b_'s values), so
 # this script's own paths and prefix are (re)assigned AFTER it, not before.
 x10b = file.path(base, "LD_X_Thesis_Presentatioon_Figures_scripts",
@@ -62,7 +39,7 @@ script_ind = "LD_X19_"
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
 message("Inherited config from LD_X10b (", stop_at - 1, " lines, nothing drawn).")
 
-### 2. override: ALL comparisons, including the two the results figure omits ---
+### include all comparisons --------------------------------------------------
 # The results figure keeps only three contrast blocks. The supplement keeps every
 # comparison, so two more blocks are added back and need their own tag/label rules:
 #   R47H vs R62H            - the direct variant-vs-variant contrast
@@ -102,7 +79,7 @@ col_labels    = cluster_of(comps_all)
 message("Comparisons: ", length(comps_all), " (",
         paste(names(table(tag_seq)), table(tag_seq), sep = ": ", collapse = ", "), ")")
 
-### 3. override: keep all terms, add the "Other" block ----------------------
+### retain all terms ---------------------------------------------------------
 sig = gsea_res_tab %>%
   filter(sub_cat == "HALLMARKS", !is.na(padj), padj < SIG_CUT, comp %in% comps_all)
 terms_all = unique(sig$pathway)
@@ -121,7 +98,7 @@ custom_group_colors = c(
   Other = "grey75")
 message("Hallmark terms: ", length(terms_all), " (", length(ungrouped), " in \"Other\")")
 
-### 4. build + save ----------------------------------------------------------
+### build and save -----------------------------------------------------------
 ml = create_path_comp_mat_list(gsea_res_tab, comps_sel = comps_all, sig_cut = SIG_CUT)
 
 ht_hallmark = build_heatmap(ml[["HALLMARKS"]],     "Hallmark")

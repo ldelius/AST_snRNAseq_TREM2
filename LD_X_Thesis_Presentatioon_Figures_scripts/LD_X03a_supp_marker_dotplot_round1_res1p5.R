@@ -1,19 +1,5 @@
-# LD_X03a: Supplementary Figure 2a - cell-type marker dot plot, ROUND-1 astrocyte
-# object at clustering resolution 1.5. This is the plot the round-2 cleanup was
-# based on: clusters expressing non-astrocyte markers were removed in LD_B03a, and
-# those rows are outlined in black here so the reader can see what was dropped and why.
-#
-# Replaces LD_B02a_Dotplots_clustering_test_integr_dataset_cell_type_markers.pdf
-# (the resolution-1.5 page of that multi-page PDF).
-#
-# TWO STAGES, so plotting never re-runs anything heavy:
-#   1. CACHE BUILD (once, on the HPC): loads LD_B02a_seur.qs (6.8 GB), extracts the
-#      DotPlot summary table (33 genes x 43 clusters) and writes it as a small CSV.
-#      Runs ONLY if that CSV is missing. Needs qs + Seurat.
-#   2. PLOT (anywhere, incl. laptop): reads the CSV and renders. Seconds, no Seurat.
-# No clustering, integration or normalisation is ever recomputed.
-#
-# DATA: LD_B02a_seur.qs, cluster column SCT_snn_res.1.5 (round 1, before cleanup).
+# LD_X03a: Round-1 marker dot plot showing clusters removed before round 2.
+# A cached summary avoids reloading the large Seurat object during plotting.
 
 library(tidyverse)
 

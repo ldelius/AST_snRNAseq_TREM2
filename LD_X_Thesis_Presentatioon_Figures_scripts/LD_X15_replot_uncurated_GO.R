@@ -1,17 +1,4 @@
-# LD_X15: re-draw the UNCURATED GO_top5_all_sig_subclusters plot with the colour
-# scheme used by the curated main-results figure.
-#
-# WHY THIS EXISTS: the version of this plot on disk
-# (LD_X04_v02_GO_top5_all_sig_subclusters.pdf, 24 Jul) was drawn when
-# LD_X04_B_characterisation_plots.R still used scale_colour_gradient(low = "blue",
-# high = "red"). That script has since been changed to the achromatic grey -> black
-# ramp, but this plot was never redrawn, so it does not match the curated figure.
-# Nothing about the term selection is changed here: NO curation, NO exclusions,
-# NO manual term order. Colour/size/theme are copied verbatim from
-# LD_X04_v02_replot_curated_GO.R.
-#
-# DATA: LD_X04_v02_GO_top_terms_table.csv (written by LD_X04_B_characterisation_
-# plots.R from the full compareCluster/enrichGO result). Cheap: tidyverse only.
+# LD_X15: Replot uncurated GO results using the curated figure's colour scheme.
 
 library(tidyverse)
 

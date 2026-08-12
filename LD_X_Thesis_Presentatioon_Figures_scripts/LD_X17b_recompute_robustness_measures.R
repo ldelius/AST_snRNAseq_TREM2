@@ -1,25 +1,5 @@
-# LD_X17b: recompute the LD_E04c concordance summary with THREE gene-selection
-# rules, so the supplementary table can use whichever is defensible.
-#
-# WHY THIS EXISTS: LD_E04c writes r under two rules only -
-#   r_shared    every gene of the E02c DEG universe present in both contrasts
-#               (no per-pair filter). Complete: 156/156 cells, ~17k genes each.
-#   r_sig_both  genes with padj < 0.1 in BOTH contrasts of the pair, within that
-#               scope. Matches the LD_X07 figure, but at subcluster level almost
-#               never has enough genes: median 0, only 39/156 cells computable.
-# Neither fills a subcluster table at a threshold that also selects for effect.
-# This adds the middle ground:
-#   r_nom_both  genes with NOMINAL p < 0.05 in both contrasts (no multiple-testing
-#               adjustment). This is the rule the earlier LD_E04a summary used,
-#               which is why that placeholder table was full.
-#
-# NOTHING IS REFITTED. It reads LD_E04c's per-job checkpoint .rds files directly,
-# which are plain RDS (base R) - so this runs on a laptop with no qs and no
-# Seurat, and never loads the 48 MB bulk_data object.
-#
-# Output: LD_E04c_effect_robustness_summary_ALLMEASURES.csv, same shape as
-# LD_E04c's own summary plus the nominal-p columns. LD_X17 reads it via its
-# R_MEASURE switch.
+# LD_X17b: Recompute LD_E04c concordance under shared, nominal-significance and
+# adjusted-significance gene-selection rules without refitting models.
 
 library(tidyverse)
 

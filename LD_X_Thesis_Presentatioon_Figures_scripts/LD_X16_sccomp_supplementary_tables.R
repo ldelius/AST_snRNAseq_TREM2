@@ -1,19 +1,4 @@
-# LD_X16: supplementary tables for the sccomp differential-abundance analyses.
-#   Table A  model inventory - every sccomp model that was run (unit of analysis,
-#            cell grouping, covariates, formula, n tests, n significant).
-#   Table B  every significant contrast (FDR < cutoff) pooled across those models.
-#
-# Reads the result CSVs written by LD_X05_abundance_plots.R. It prefers the
-# NEWEST available result set: v04 (which also stores c_effect / c_lower /
-# c_upper) if present, else v03 (FDR only). Table B gains effect-size and
-# credible-interval columns automatically once the v04 rerun has landed, so this
-# script does not need editing then - just rerun it.
-#
-# Cheap: tidyverse + flextable only. No sccomp, no Seurat, nothing refitted.
-#
-# NOT included here: the LD_X06 pathology x TREM2 interaction models (a different
-# question, AD-only, reported separately) and LD_X05b (a methods check, not a
-# result).
+# LD_X16: Supplementary tables for sccomp differential-abundance analyses.
 
 library(tidyverse)
 

@@ -1,37 +1,11 @@
 message("\n\n##########################################################################\n",
         "# Start LD_E04c: Incremental covariate adjustment (5-covariate base) ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n   Re-runs the TREM2 variant DESeq2 contrasts (pooled + per subcluster)",
-        "\n   under progressively more covariate adjustment, starting from the agreed",
-        "\n   5-covariate model (cohort + APOE + CD33 + BrainRegion + Sex) and adding",
-        "\n   Age, PMI and Braak cumulatively, to test whether effects survive adjustment.",
         "\n##########################################################################\n\n")
 
-# WHAT THIS SCRIPT DOES (compute only; classification + plotting are in LD_X07)
-# ---------------------------------------------------------------------------
-# Tests whether the TREM2 log2FC correlations survive additional covariate
-# adjustment. Starting from the agreed 5-covariate model (cohort + APOEgroup +
-# CD33Group + BrainRegion + Sex), it re-runs the pooled DESeq2 LRT contrasts
-# while adding covariates cumulatively, one at a time:
-#     M0 = 5-covariate base
-#     M1 = + Age
-#     M2 = + Age + PMI
-#     M3 = + Age + PMI + Braak
-# "clean -> severity" order: Age and PMI (complete, demographic/technical) first,
-# Braak (severity proxy, correlates with TREM2Variant) last as the over-correction
-# test. Contrasts: CV_AD_vs_Control, R62H_vs_CV, R47H_vs_CV, R47H_vs_R62H.
-#
-# SCOPE: pooled only (all astrocyte pseudobulks, cluster_name as a covariate to
-# absorb baseline between-cluster differences). The per-subcluster scatter reuses
-# E02c directly in X07, so the per-subcluster M0 model is not refitted here.
-# NOTE: a donor contributes several cluster pseudobulks, so the pooled model is
-# pseudo-replicated (DESeq2 LRT treats them as independent) - exploratory only.
-#
-# OUTPUT: per-gene results for each (level x contrast) stored in $E04_deseq_res
-# of LD_E04c_bulk_data.qs. Classification (padj < 0.1), Pearson r and all plotting
-# are done downstream in LD_X07.
+# Age and PMI are added before Braak because Braak is a severity proxy correlated
+# with TREM2 genotype and may constitute over-adjustment. The pooled model is
+# exploratory because DESeq2 treats a donor's cluster pseudobulks independently.
 
-# Open packages necessary for analysis.
 library(qs)
 library(tidyverse)
 library(DESeq2)
@@ -58,9 +32,7 @@ bulk_data = qread(file = paste0(out_dir, "LD_E01_v02_bulk_data.qs"))
 ref_cluster = "AST_SLC1A2_s0"
 
 
-###########################################################
-# prepare metadata: factor categoricals, build numeric covariates
-###########################################################
+### prepare metadata --------------------------------------------------------
 
 meta = as.data.frame(bulk_data$meta)
 rownames(meta) = meta$cluster_sample
@@ -149,9 +121,7 @@ comp_counts = m1[keep_genes, ]
 comp_clusters = unique(as.character(meta$cluster_name))
 
 
-###########################################################
-# define covariate levels (cumulative; "clean -> severity")
-###########################################################
+### cumulative covariate levels ---------------------------------------------
 
 # baseline = the agreed 5-covariate model (E02c); increments added cumulatively
 # in "clean -> severity" order: Age and PMI (complete, demographic/technical) first,
@@ -171,9 +141,7 @@ covar_level_labels = c(M0_base = "M0", M1_Age = "+Age",
                        M2_Age_PMI = "+PMI", M3_Age_PMI_Braak = "+Braak")
 
 
-###########################################################
-# define the 4 DESeq2 contrasts feeding the requested plots
-###########################################################
+### DESeq2 contrasts ---------------------------------------------------------
 # Each contrast = a subset of the data + a tested variable (and its reference
 # level). Reference levels chosen so log2FC signs match the original E02a2 plot.
 
@@ -209,9 +177,7 @@ plot_pairs = list(
 )
 
 
-###########################################################
-# helper: guarded DESeq2 LRT run (refactored from E02a2)
-###########################################################
+### guarded DESeq2 LRT -------------------------------------------------------
 # Drops single-level / collinear covariates, omits the run if a covariate is
 # collinear with the tested variable or there are too few samples. Returns the
 # results table (or NULL) plus the final formulas and a log message.
@@ -293,9 +259,7 @@ run_deseq_guarded = function(meta_sub, counts_sub, covars, tested, add_cluster =
 }
 
 
-###########################################################
-# run all contrasts x covariate levels x scopes (parallel + resumable)
-###########################################################
+### run contrasts across covariate levels and scopes ------------------------
 # Each (scope, level, contrast) is an independent DESeq2 LRT. There are several
 # hundred and each takes ~30-45s, so single-threaded this is ~4-5h. We therefore
 # (a) run them in PARALLEL across the allocated cores and (b) CHECKPOINT every
@@ -304,14 +268,7 @@ run_deseq_guarded = function(meta_sub, counts_sub, covars, tested, add_cluster =
 # it stopped. (If you change the MODELS - covar_sets/contrasts/filtering - delete
 # the ckpt/ directory first so stale results are not reused.)
 
-# Pooled AND per-subcluster. Previously pooled-only, on the grounds that the
-# per-subcluster M0 model is identical to E02c and need not be refitted. That
-# holds for M0, but M1-M3 (+Age, +PMI, +Braak) were never fitted per subcluster,
-# so the supplementary covariate-robustness table had no subcluster values under
-# the 5-covariate base. Refitting M0 here too keeps every rung of the ladder
-# inside one run and one gene universe.
-# NB: adding scopes changes the job set, NOT the models - existing pooled
-# checkpoints stay valid and are skipped, so this resumes rather than restarts.
+# Refit M0 in every scope so the adjustment ladder uses one gene universe.
 scopes = c(as.character(comp_clusters), "pooled")
 
 ckpt_dir = paste0(out_dir, script_ind, "ckpt/")
@@ -385,9 +342,7 @@ bulk_data$E04_deseq_res = deseq_res
 bulk_data$E04_model_log = model_log
 qsave(bulk_data, file = paste0(out_dir, script_ind, "bulk_data.qs"))
 
-###########################################################
-# robustness summary: Pearson r per (scope x pair x covariate level)
-###########################################################
+### robustness summary ------------------------------------------------------
 # Written as a small CSV so the supplementary table can be built on a laptop
 # without loading the .qs (which needs qs + this environment).
 #
@@ -435,10 +390,7 @@ if (!is.null(robust_tab)) {
 }
 
 message("\n\n##########################################################################\n",
-        "# Completed LD_E04c (pooled + per-subcluster compute) ", Sys.time(),
-        "\n   per-gene results per (scope x level x contrast) saved in $E04_deseq_res;",
-        "\n   Pearson r summary in ", script_ind, "effect_robustness_summary.csv;",
-        "\n   classification (padj<0.1) and all plotting are done in LD_X07.",
+        "# Completed LD_E04c ", Sys.time(),
         "\n##########################################################################\n\n")
 
 sessionInfo()

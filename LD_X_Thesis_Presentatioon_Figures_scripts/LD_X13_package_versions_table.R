@@ -1,16 +1,6 @@
-# LD_X13: Supplementary table of software packages and versions.
-#
-# TWO STAGES, because the analysis env and the table-rendering env differ:
-#   1. On the HPC (conda R43_240426, the environment the thesis analyses ran in):
-#      queries the installed version of every package and writes/updates a CSV.
-#   2. On the laptop: fills in anything still missing (flextable, which is only
-#      installed locally) and renders the Word/PNG table.
-# Versions are only ever FILLED IN, never overwritten, so the HPC values win for
-# every analysis package. Run on the HPC first, then locally.
-#
-# Rationale: package versions must be read from the live library, not from old job
-# logs - the conda env has been updated over time, so different logs record
-# different versions of the same package.
+# LD_X13: Supplementary table of software-package versions.
+# Analysis-environment versions are retained when the table is rendered locally.
+# Versions are read from the environment because historical job logs disagree.
 
 library(tidyverse)
 

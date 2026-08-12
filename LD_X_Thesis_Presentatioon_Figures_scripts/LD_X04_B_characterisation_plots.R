@@ -1,12 +1,5 @@
-# LD_X04: Astrocyte cluster-characterisation plots for the thesis (B scripts).
-#   Umbrella script - add further characterisation plots as new sections below.
-#
-#   Plot 1 (MAIN): Green et al. (2024) astrocyte-state module-score dot plot,
-#                  with renamed state labels.
-#
-# DATA: LD_B04a_v02_seur.qs (cleaned round-2 astrocytes; B03 embedding/clusters).
-#   Module scores are RECOMPUTED here because the saved object does not store them
-#   (B04a's only qsave precedes AddModuleScore). Run on the HPC R (qs + Seurat).
+# LD_X04: Astrocyte-state module scores and subcluster GO enrichment.
+# Module scores are recomputed because they are not stored in the B04a object.
 
 library(tidyverse)
 library(qs)
@@ -30,11 +23,7 @@ DefaultAssay(seur) = "SCT"
 ord = read_csv(clust_csv, show_col_types = FALSE)
 cluster_names = unique(ord$cluster_name)   # subtype-grouped order (SLC1A2, GFAP, CHI3L1)
 
-################################################################################
-# Plot 1 (MAIN): Green et al. (2024) astrocyte-state module-score dot plot
-################################################################################
-# Build per-state signatures (same filter as B04a), score each with AddModuleScore,
-# then plot module score per astrocyte subcluster.
+### Green et al. astrocyte-state module scores -------------------------------
 
 green = read_csv(green_csv, show_col_types = FALSE)
 ast_states = paste0("Ast.", 1:10)          # numeric order Ast.1 ... Ast.10
@@ -118,9 +107,7 @@ message("Plot 1 (Green24 dot plot) written.")
 # the FindAllMarkers/GO section below (that's what was hitting the OnDemand
 # session memory limit).
 
-################################################################################
-# Table: per-subcluster abundance (% of its subtype, and % of all astrocytes)
-################################################################################
+### per-subcluster abundance -------------------------------------------------
 # "overcluster" = transcriptomic subtype (cell_type: AST_SLC1A2 / GFAP / CHI3L1).
 abund = seur@meta.data %>%
   dplyr::count(cell_type, cluster_name, name = "n_cells") %>%
@@ -134,10 +121,7 @@ write_csv(abund, file.path(out_dir, paste0(script_ind, "cluster_abundance_pct.cs
 message("Per-subcluster abundance (n, % of subtype, % of total):")
 print(as.data.frame(abund), digits = 3)
 
-################################################################################
-# Plot: GO (BP) over-representation - two largest subclusters per subtype, AND
-#       all subclusters that have significant enrichment
-################################################################################
+### GO BP over-representation ------------------------------------------------
 library(clusterProfiler)
 library(org.Hs.eg.db)
 
@@ -324,9 +308,5 @@ curated_term_order = c(
 make_go_dotplot(res, sig_clusters, 5, "GO_top5_all_sig_subclusters_curated", title = NULL,
                 exclude_terms = curated_exclude_terms, family_sep = TRUE,
                 term_order = curated_term_order)
-
-################################################################################
-# Plot N: <add next characterisation plot here>
-################################################################################
 
 message("Done. Outputs in ", out_dir)

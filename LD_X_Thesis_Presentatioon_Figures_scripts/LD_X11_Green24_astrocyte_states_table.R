@@ -1,8 +1,4 @@
-# LD_X11: Reference table of the Green et al. 2024 astrocyte states (Ast.1-Ast.10).
-# Content is a hand-curated summary of the source publication, not derived from the
-# data, so this script has no inputs - it only renders the table.
-# Styling matches the LD_X01 cohort tables (three rules, italic header, 9 pt).
-# Outputs: CSV + styled HTML (always) and Word/PNG (flextable).
+# LD_X11: Reference table of Green et al. (2024) astrocyte states.
 
 library(tidyverse)
 

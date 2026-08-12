@@ -1,25 +1,6 @@
-# LD_X05b: independent verification of LD_X05's contrasts= arithmetic.
-#
-# sccomp 1.6.0 has a documented failure mode where certain `contrasts=` string
-# expressions (e.g. "groupA - groupB") can silently return degenerate values
-# (identical estimates, zero-width credible intervals, FDR=1) instead of
-# erroring. LD_X05_abundance_plots.R uses exactly that pattern
-# (contrasts = "groupAD_R62H - groupControl_CV" etc.) via cell-means coding
-# (~ 0 + group). This script checks whether that's actually happening here.
-#
-# Method: refit the SAME subtype-level, UNADJUSTED model, but with TREATMENT
-# (dummy) coding instead of cell-means coding + contrasts=. With Control_CV
-# releveled as the reference, the model formula is simply `~ group` (intercept
-# implied) - under treatment coding, the coefficient named "groupAD_R62H" IS
-# DIRECTLY the AD_R62H-vs-Control_CV difference. No contrasts= arithmetic is
-# involved anywhere in this script. If this independently-computed result
-# agrees with the corresponding row already saved by LD_X05
-# (LD_X05_sccomp_subtypes_unadj.csv, comparison == "AD_R62H vs Ctrl_CV"), that
-# confirms LD_X05's contrasts= usage is reliable for this pattern.
-#
-# Deliberately the SMALLEST/cheapest of LD_X05's six sccomp calls (subtype
-# level = 3 cell groups, unadjusted = no covariates) - this is a spot check,
-# not a full rerun.
+# LD_X05b: Verify LD_X05 contrast arithmetic using treatment coding.
+# This avoids the degenerate results possible with sccomp string contrasts;
+# the smallest unadjusted subtype model is used as a targeted check.
 
 library(tidyverse)
 library(qs)

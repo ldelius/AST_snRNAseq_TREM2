@@ -1,20 +1,5 @@
-# LD_X04c: sensitivity check for the Green et al. (2024) astrocyte-state mapping
-# (LD_X04 Plot 1) - does the state <-> subcluster ranking survive removing the
-# three subtype-defining genes (SLC1A2, GFAP, CHI3L1) from the state signatures?
-#
-# Deliberately kept separate from LD_X04_B_characterisation_plots.R: that script's
-# FindAllMarkers/GO section is what was hitting the OnDemand session memory limit,
-# and this check doesn't need any of it - just the B04 object + AddModuleScore.
-#
-# For each of the 10 Green states:
-#   - "full"  score = AddModuleScore using the state's full gene list
-#   - "loo"   score = AddModuleScore using the state's gene list with
-#                     SLC1A2/GFAP/CHI3L1 removed (leave-one-[gene]-out)
-#   mean score per subcluster -> z-scaled across subclusters (within that state,
-#   full and loo separately) -> compare: same top-ranked subcluster? correlated
-#   ranking overall (Pearson r on the z-profiles)?
-#
-# DATA: LD_B04a_v02_seur.qs. Run on the HPC R (qs + Seurat).
+# LD_X04c: Test whether SLC1A2, GFAP and CHI3L1 drive the Green et al. state
+# mapping by comparing full and marker-excluded state scores.
 
 library(tidyverse)
 library(qs)
@@ -137,16 +122,9 @@ ggsave(file.path(out_dir, paste0(script_ind, "Green24_dotplot_LOO_excl_subtype_m
        p_loo, width = 8, height = 7, dpi = 300)
 message("Dot plots written (full + LOO).")
 
-################################################################################
-# Combined figure: Green24 module-score plot (A) + curated GO term plot (B)
-################################################################################
-# Built directly here (not via a separate saveRDS-cached combining script - that
-# approach silently serialised the whole Seurat object via ggplot's captured
-# plot_env, which is what caused the earlier multi-GB / stuck-saving problem).
-# The GO panel is rebuilt from the already-written GO_top_terms_table.csv (from
-# LD_X04_B_characterisation_plots.R's compareCluster/enrichGO result) - cheap,
-# CSV-only, no Seurat/enrichGO rerun. `cluster_names`, `out_dir`, `base`,
-# `script_ind`, and `p_full` are all already available from earlier in this script.
+### combined Green24 and GO figure -------------------------------------------
+# Rebuild the GO panel from saved results to avoid serialising the Seurat object
+# through ggplot's captured environment.
 go_csv = file.path(base, "LD_X_Thesis_Presentation_output/LD_X04_v02_GO_top_terms_table.csv")
 
 if (!file.exists(go_csv)) {

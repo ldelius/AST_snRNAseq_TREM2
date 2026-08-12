@@ -1,21 +1,4 @@
-# LD_X18: re-draw the LD_F03c_v02 WGCNA "top GO terms per module" dot plot with a
-# taller canvas and larger row labels.
-#
-# NOTHING IS RECOMPUTED. WGCNA and the GO enrichment already ran in
-# LD_F03c_v02_WGCNA_AD_both_variants_7covar_corr_DEGseed.R; this reads the GO
-# result table it wrote and re-plots it.
-#
-# TWO KNOBS:
-#   TOP_N      terms per module (10 = as the original; 5 = fits an A4 page)
-#   ROW_IN     inches of height per y-axis row; label size scales with it
-# The original was 11 x 12 in for 82 terms, i.e. 0.15 in per row, which is why
-# the row labels had to be small.
-#
-# MODULE COLOURS: the original coloured the dots by raw WGCNA colour name
-# (turquoise/blue/brown/...), which lives only inside the 856 MB bulk_data.qs and
-# does not fit the thesis palette. Replaced with viridis (thesis convention for
-# categorical identity), so this script needs neither qs nor the big object and
-# runs on a laptop in seconds. See the module-colours section below.
+# LD_X18: Replot WGCNA GO enrichment with readable row spacing.
 
 library(tidyverse)
 

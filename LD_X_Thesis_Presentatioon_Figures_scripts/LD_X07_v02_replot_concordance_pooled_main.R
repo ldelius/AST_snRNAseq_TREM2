@@ -1,19 +1,5 @@
-# LD_X07_v02_replot_concordance_pooled_main: re-draw ONLY the pooled log2FC
-# concordance main panel (LD_X07_log2FC_concordance_pooled_main), from the
-# pre-computed DESeq2 result checkpoint (LD_E04c_bulk_data.qs, ~48 MB - light;
-# no need to touch the ~3.4 GB LD_E02a2 object the rest of LD_X07 also loads,
-# and no DESeq2 refitting happens here either way, so this is cheap.
-#
-# Changes vs. the original panel:
-#   - no overall title, no caption
-#   - legend: dropped the *_nreg / nreg_* categories. They're structurally
-#     impossible in this reg_both data - build_pair() only keeps genes
-#     significant in BOTH contrasts, so reg_group is always exactly one of
-#     down_down/up_up/down_up/up_down; the other 5 levels never had a single
-#     point and were just cluttering the legend with dot-less entries.
-#   - down_up and up_down (both plotted magenta = opposite-direction /
-#     discordant effect) merged into one "Discordant" legend entry
-#   - single-row horizontal legend, bigger legend dots for legibility
+# LD_X07_v02: Replot pooled log2FC concordance from the E04c checkpoint.
+# Opposite-direction categories share one legend entry.
 
 library(tidyverse)
 library(qs)

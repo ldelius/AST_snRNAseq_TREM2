@@ -1,34 +1,6 @@
-# LD_X21: supplementary table - do the WGCNA modules survive additional
-# correction for pathology?
-#
-# The main network (LD_F03c_v02, DEG-seeded, 7-covariate corrected) was rebuilt
-# from scratch in LD_F03d_v01 after further group-protected correction for:
-#   Model A  Age + Braak
-#   Model B  Age + Braak + plaque density + AT8 + PHF1 + 4G8
-# Each model re-ran the whole pipeline independently, so its module numbering is
-# its own and carries no relation to the main one. LD_F03d never compared the
-# resulting module sets, which is what this script does.
-#
-# MATCHING RULE: each main module is matched to the rebuilt module SHARING THE
-# LARGEST NUMBER OF ITS GENES (largest intersection), as stated in the Methods -
-# not by highest Jaccard. The two rules pick the same partner for 28 of the 30
-# module-model pairs; they differ only for main M3 under Model A and main M10
-# under Model B, both weak matches either way (J <= 0.34).
-#
-# Reported per module:
-#   Retained  % of ALL genes in the original module found in the matched module.
-#             STRICT denominator: a gene that the rebuilt network pushes into the
-#             unassigned set (M0) counts as lost. NB this is a harsher measure
-#             than "% of the genes still assigned to any module", which is what
-#             the Results text quotes - the two differ most for modules that shed
-#             many genes to M0 (e.g. M12: 71% strict vs 86% among-assigned).
-#   J         Jaccard index of that match, kept as a supporting statistic since
-#             it also penalises the matched module being much larger.
-#
-# M0 is excluded: it is WGCNA's unassigned set, not a module, so "preservation"
-# of it is not meaningful.
-#
-# Cheap: reads three gene-membership CSVs. Nothing recomputed, no .qs loaded.
+# LD_X21: Stability of WGCNA modules after additional pathology correction.
+# Independently rebuilt modules are matched by maximum gene overlap; genes
+# reassigned to M0 count as lost from the original module.
 
 library(tidyverse)
 
