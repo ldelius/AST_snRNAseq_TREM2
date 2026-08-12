@@ -10,7 +10,7 @@ This study examines whether and how R47H and R62H influence astrocyte transcript
   <img src="doc/images/optimise_pp_method.png?v=2" width="900">
 </p>
 
-**Figure 1.** Study design and analysis workflow.
+**Figure 1.** Study design and analysis workflow. Created with BioRender.com.
 
 Input data, intermediate analysis objects, and generated results are not included in this repository.
 
