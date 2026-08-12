@@ -58,7 +58,6 @@ Thesis status is given after each analysis description.
 
   - [`LD_E02a2_v061_pseudobulk_DESeq2_LRT_by_clust_by_diagn_TREM2_R47H_vs_R62H_corr_APOE_CD33_BrainReg.R`](LD_E_DESeq_pseudobulk_scripts/LD_E02a2_v061_pseudobulk_DESeq2_LRT_by_clust_by_diagn_TREM2_R47H_vs_R62H_corr_APOE_CD33_BrainReg.R)
   - [`LD_E03a2_v061_DEG_characterisation_pairwise_comps_GO.R`](LD_E_DESeq_pseudobulk_scripts/LD_E03a2_v061_DEG_characterisation_pairwise_comps_GO.R)
-  - [`LD_E03b2_v061_DEG_characterisation_GSEA_with_in_vitro.R`](LD_E_DESeq_pseudobulk_scripts/LD_E03b2_v061_DEG_characterisation_GSEA_with_in_vitro.R)
   - [`LD_E04a_v01_incremental_covar_adj_log2FC_corr_sel_comps.R`](LD_E_DESeq_pseudobulk_scripts/LD_E04a_v01_incremental_covar_adj_log2FC_corr_sel_comps.R)
 
 
@@ -182,11 +181,8 @@ The G02 and G03 scripts use CellChat (1) with G01 preparing their inputs. Cell-c
 - **Earlier figure-generation workflows** *(superseded)*
 
   - [`LD_X03_supp_resolution_QC_UMAPs.R`](LD_X_Thesis_Presentatioon_Figures_scripts/LD_X03_supp_resolution_QC_UMAPs.R)
-  - [`LD_X04_v02_replot_curated_GO.R`](LD_X_Thesis_Presentatioon_Figures_scripts/LD_X04_v02_replot_curated_GO.R)
   - [`LD_X07_pseudobulk_DESeq2_figures_5covar.R`](LD_X_Thesis_Presentatioon_Figures_scripts/LD_X07_pseudobulk_DESeq2_figures_5covar.R)
-  - [`LD_X07_v02_replot_concordance_pooled_main.R`](LD_X_Thesis_Presentatioon_Figures_scripts/LD_X07_v02_replot_concordance_pooled_main.R)
   - [`LD_X07_v03_combined_DEG_pairwise.R`](LD_X_Thesis_Presentatioon_Figures_scripts/LD_X07_v03_combined_DEG_pairwise.R)
-  - [`LD_X10_GSEA_heatmap_largest7_replot.R`](LD_X_Thesis_Presentatioon_Figures_scripts/LD_X10_GSEA_heatmap_largest7_replot.R)
 
 - **Additional validation and exploratory figures** *(not used in thesis / exploratory)*
 
