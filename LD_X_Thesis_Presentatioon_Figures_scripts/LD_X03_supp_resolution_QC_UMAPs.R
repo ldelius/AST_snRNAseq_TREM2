@@ -1,16 +1,5 @@
-# LD_X03: Supplementary figure - clustering-resolution choice + integration QC.
-#   Panel b (3 sub-panels): astrocyte UMAP coloured by cluster at resolutions
-#               0.2 / 0.3 / 0.5 (cluster numbers labelled), justifying resolution 0.3.
-#   Panel c:    same UMAP coloured by sequencing cohort, showing Harmony
-#               integration mixed the two cohorts (batch-effect QC).
-#   (Panel a = the marker dot plot, assembled separately, so this script emits b and c.)
-# One row of four UMAPs, consistent style.
-#
-# DATA: uses LD_B04a_v02_seur.qs. Its `umap` embedding and `SCT_snn_res.*` clusters
-#   are the B03 ROUND-2 results (cleaned astrocytes) - B04 inherits them unchanged
-#   and never recomputes them. So these are the B03 plots, NOT the B02 round-1 UMAPs.
-#
-# NB: needs qs + Seurat (run on the HPC R). Loads the B04 astrocyte object once.
+# LD_X03: Resolution-selection and integration-QC UMAPs.
+# Uses B03 round-2 clusters stored in the B04 object; panel a is assembled separately.
 
 library(tidyverse)
 library(qs)
@@ -48,7 +37,7 @@ theme_umap = function() theme_classic(base_size = 12) +
         legend.key.size = unit(5, "mm"))
 make_pal = function(levels) set_names(scales::hue_pal(l = 55, c = 110)(length(levels)), levels)
 
-### load object, pull what we need, free memory -----------------------------
+### load object and retain plotting data ------------------------------------
 message("Loading B04 astrocyte object...")
 s = qread(b04_path)
 

@@ -49,7 +49,7 @@ message("\n\n          *** Load CellChat objects... ", Sys.time(), "\n\n")
 cc_list = lapply(in_cellchat, qread)
 
 
-### ensure centrality computed in each (cheap if already done)
+### ensure centrality is computed in each object
 for (g in ad_groups){
   if (length(cc_list[[g]]@netP$centr) == 0){
     cc_list[[g]] = netAnalysis_computeCentrality(cc_list[[g]], slot.name = "netP")
@@ -422,8 +422,7 @@ plot_by_MIC_bubble_3group = function(merged_cc, group_names,
   ### the entire L-R database into the bubble).
   pw_signaling = tryCatch({
     pw_lists = lapply(seq_along(merged_cc@net), function(i){
-      ### subsetCommunication on merged returns per-dataset list of data.frames
-      ### but we can index per net entry; safer: compute via @netP$pathways
+      ### derive pathways from each netP entry
       merged_cc@netP[[i]]$pathways
     })
     sort(unique(unlist(pw_lists)))
@@ -770,10 +769,7 @@ run_pair_comparison = function(pair_name, group_a, group_b, cc_a, cc_b,
   }
 
 
-  ### 3g. extract differential L-R tables (CSV) for both directions
-  ### CellChat's identifyOverExpressedLR equivalent on merged objects -
-  ### we use subsetCommunication on the merged object for a clean per-pair table.
-  ### Compute prob differences and save sorted by abs difference.
+  ### 3g. extract differential L-R tables for both directions
   tryCatch({
     nt_a = subsetCommunication(cc_a)
     nt_b = subsetCommunication(cc_b)

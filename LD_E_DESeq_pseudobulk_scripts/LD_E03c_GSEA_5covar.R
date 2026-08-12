@@ -2,7 +2,7 @@ message("\n\n###################################################################
         "# Start LD_E03c: Five-covariate pseudobulk GSEA ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# Re-runs E03b2 on the five-covariate E02c results using FDR rather than nominal p-values.
+# Uses FDR-significant five-covariate E02c results.
 library(qs)
 library(tidyverse)
 library(DESeq2)
@@ -13,7 +13,7 @@ library(clusterProfiler)
 library(DOSE)
 library(org.Hs.eg.db)
 library(ggrepel)
-library(msigdbr) # Michael used msigdf; replaced with msigdbr (CRAN, actively maintained)
+library(msigdbr)
 library(fgsea)
 
 
@@ -35,7 +35,6 @@ bulk_data = qread(file = paste0(out_dir, "LD_E02c/LD_E02c_v01_bulk_data.qs"))
 
 
 ### get user-defined gene sets for GSEA
-# GSEA needs predefined gene sets. we use the standard MSigDB library plus additional custom signatures
 
 gsea_sets = list()
 
@@ -48,8 +47,7 @@ for (cl in unique(t1$state)){
   gsea_sets[[paste0("Green24_",cl)]] = t2$gene
 }
 
-# NOTE: only the Green et al. astrocyte-state signatures are kept as user-defined
-# sets here (the GOI / in-vitro sets from E03b2 are intentionally omitted).
+# User-defined sets are limited to Green et al. astrocyte-state signatures.
 
 lengths(gsea_sets)
 
@@ -231,7 +229,7 @@ for (cat1 in category_codes){
   
   message("\n   *run GSEA for category ", cat1, " - ", Sys.time(),"\n")
   
-  pathways = msigdbr(species = "Homo sapiens", collection = cat1) %>% # Michael used msigdf.human; replaced with msigdbr(); msigdbr v10+ uses collection= instead of category=
+  pathways = msigdbr(species = "Homo sapiens", collection = cat1) %>%
     dplyr::select(gs_name, gene_symbol) %>%
     group_by(gs_name) %>%
     summarize(gene_symbol = list(gene_symbol)) %>%
@@ -496,9 +494,7 @@ cutoffs        = c(FDR05 = 0.05, FDR10 = 0.10)   # plotted at BOTH; fgsea comput
 
 SIG_CUT = 0.10   # FDR < 0.1, consistent with the DEG threshold used elsewhere
 
-# MSigDB Hallmark process categories (Liberzon et al. 2015, Cell Syst) -> used to
-# order Hallmark rows by functional family. NOTE: encoded here from the published
-# table; sanity-check the assignments against MSigDB before final thesis use.
+# MSigDB Hallmark process categories (Liberzon et al. 2015) used to order rows.
 hallmark_family = c(
   HALLMARK_ALLOGRAFT_REJECTION="immune", HALLMARK_COAGULATION="immune",
   HALLMARK_COMPLEMENT="immune", HALLMARK_INTERFERON_ALPHA_RESPONSE="immune",
@@ -540,7 +536,7 @@ draw_heatmap = function(mat, collection, fbase){
     gaps   = head(cumsum(rle(fam)$lengths), -1)                    # gap between families
     annot  = data.frame(family = factor(fam, levels = fam_levels)); rownames(annot) = rownames(mat)
     crows  = FALSE
-  } else {                                                         # Green: cluster as original
+  } else {                                                         # cluster Green terms
     gaps = NULL; annot = NA; crows = TRUE
   }
   lim = max(abs(mat))

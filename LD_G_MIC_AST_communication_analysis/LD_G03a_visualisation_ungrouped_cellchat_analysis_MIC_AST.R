@@ -146,10 +146,8 @@ cellchat = netAnalysis_computeCentrality(cellchat, slot.name = "netP")
 # 4. aggregated network circle plots (count + weight)
 ###########################################################
 
-# Two circle plots: edge count (number of significant interactions) and edge
-# weight (sum of communication probability).
-# Node size refelects number of cells; the amount of clusters is to high to really see sth in the circle plot,
-# but it's a useful overview of the overall communication landscape and a starting point for the more detailed plots that follow.
+# Circle plots show significant-interaction counts and summed probabilities;
+# node size represents cell count.
 
 message("\n\n          *** Aggregated network circle plots... ", Sys.time(), "\n\n")
 
@@ -399,11 +397,7 @@ if (length(pathways_MIC_AST) > 0){
 # 12. MIC->AST L-R bubble plot (CellChat-native + custom)
 ###########################################################
 
-# Two bubble plots:
-#  - netVisual_bubble: standard CellChat L-R bubble across MIC sources / AST
-#    targets, restricted to MIC->AST pathways
-#  - custom ggplot bubble: same data but with pathway-coloured dots, matches
-#    Michael's F02
+# CellChat-native and pathway-coloured MIC-to-AST bubble plots.
 
 message("\n\n          *** MIC->AST bubble plots... ", Sys.time(), "\n\n")
 
@@ -428,7 +422,7 @@ if (length(pathways_MIC_AST) > 0){
 }
 
 
-### custom ggplot bubble (Michael's F02 style)
+### custom ggplot bubble
 if (length(pathways_MIC_AST) > 0 && nrow(net_tab_MIC_AST_ranked) > 0){
 
   t1 = net_tab_MIC_AST_ranked
@@ -461,9 +455,7 @@ if (length(pathways_MIC_AST) > 0 && nrow(net_tab_MIC_AST_ranked) > 0){
 # 13. per-pathway gene expression (CellChat-native violin)
 ###########################################################
 
-# CellChat-native plotGeneExpression: violin plots of ligand/receptor genes
-# split by cluster identity. Lightweight screen of which genes drive each
-# pathway. Multi-page PDF, one page per MIC->AST pathway.
+# Ligand/receptor expression by cluster, one page per MIC-to-AST pathway.
 
 message("\n\n          *** Per-pathway gene expression violins... ", Sys.time(), "\n\n")
 
@@ -505,12 +497,8 @@ message("\n\n          *** Pathway-gene Z-score heatmaps (MIC->AST)... ", Sys.ti
 if (length(pathways_MIC_AST) > 0){
 
   ### extract pathway-gene table for MIC->AST pathways
-  # Loop pulls ligand subunits, receptor subunits, agonists, antagonists, co-A
-  # and co-I receptors for each L-R pair in each pathway. Matches Michael's F02
-  # extraction.
-  # Note: cellchat@DB is the DEG-filtered DB from G02a, so pathway_genes_tab
-  # only contains interactions that survived DEG filtering. This is consistent
-  # with what was actually tested by computeCommunProb.
+  # The DEG-filtered database limits this table to interactions tested by
+  # computeCommunProb.
 
   pathway_genes_tab = tibble(pathway = character(),
                              interaction_name = character(),

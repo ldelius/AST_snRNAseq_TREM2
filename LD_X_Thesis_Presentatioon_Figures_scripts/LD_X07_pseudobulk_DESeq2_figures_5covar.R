@@ -24,7 +24,7 @@ script_ind = "LD_X07_"
 e02c_deg_genes_csv = file.path(e_out, "LD_E02c/LD_E02c_v01_DEGs_by_cluster_genes.csv")
 tf_csv             = file.path(base, "data_TREM2_michael/A_input/Transcription Factors hg19 - Fantom5_21-12-21.csv")
 
-# Disabled because the legacy sections use the old three-covariate inputs.
+# Run only the five-covariate sections.
 RUN_LEGACY = FALSE
 
 save_plot = function(p, suffix, w, h) {
@@ -204,20 +204,14 @@ message("\n##### DEG / TF summary (5-covariate, pooled across subclusters) #####
 print(as.data.frame(deg_tf_summary), row.names = FALSE)
 
 
-##########################################################################
-# PART B - pairwise log2FC concordance scatters (5-covariate)
-#   B1 pooled MAIN (3 pairs, M0)           from E04c $E04_deseq_res
-#   B2 pooled incremental GRID (M0 .. +Braak) from E04c
-#   B3 per-subcluster MULTIPAGE (3 pages)  from E02c $deseq_results (M0 / 5-cov)
-# reg_both genes (padj < 0.1 in BOTH contrasts), classified concordant/discordant,
-# with a fitted regression line and Pearson r.
-##########################################################################
+### Part B: pairwise log2FC concordance scatters ----------------------------
+# Uses genes with padj < 0.1 in both contrasts.
 
 message("\n          *** PART B: log2FC concordance scatters... ", Sys.time(), "\n")
 
 e04c_path = file.path(e_out, "LD_E04c_bulk_data.qs")
 e02c_path = file.path(e_out, "LD_E02c/LD_E02c_v01_bulk_data.qs")
-DOT       = 0.6   # point size (was 2 in the old version)
+DOT       = 0.6   # point size
 
 # three scatter pairs (y vs x); contrast names as stored in E04c
 pairs = list(
@@ -242,11 +236,8 @@ norm_res = function(res){
   g = if ("gene" %in% names(res)) as.character(res$gene) else rownames(res)
   tibble(gene = g, log2FC = res$log2FoldChange, padj = res$padj, pval = res$pvalue)
 }
-# reg_both table: genes significant in BOTH contrasts, classified into reg_group by
-# sign exactly as E03a2 so the colours match the original. Significance criterion is
-# parameterised: pooled scatters use FDR (padj < 0.1); the per-subcluster trend-check
-# uses nominal p < 0.05 (as the original), because single subclusters lack the power
-# for genes to reach FDR < 0.1 in both contrasts.
+# Classify genes significant in both contrasts by E03a2 sign convention.
+# Pooled plots use FDR < 0.1; subcluster trend checks use nominal p < 0.05.
 build_pair = function(res_y, res_x, sig_col = "padj", sig_cut = 0.1){
   empty = tibble(gene = character(), log2FC_y = numeric(), log2FC_x = numeric(),
                  reg_group = factor(character(), levels = reg_levels))
@@ -264,9 +255,7 @@ build_pair = function(res_y, res_x, sig_col = "padj", sig_cut = 0.1){
 }
 safe_cor = function(x, y) if (length(x) >= 3) suppressWarnings(cor(x, y)) else NA_real_
 
-# shared scatter layers, matching the original E03a2 aesthetic (colours, dashed
-# +/-log2(1.2) guides, solid 0 lines, grey lm line, theme_minimal). Only agreed
-# changes: smaller points (DOT) and a single overall lm line (matches the single r).
+# Shared E03a2 scatter styling with one overall regression line.
 scatter_base = function(dot = DOT){
   list(geom_vline(xintercept = c(-log2(1.2), log2(1.2)), linewidth = 0.3, color = "grey30", linetype = 2),
        geom_hline(yintercept = c(-log2(1.2), log2(1.2)), linewidth = 0.3, color = "grey30", linetype = 2),
@@ -340,8 +329,7 @@ for (p in pairs){
     !is.null(dres[[paste0(cl, "_", e02c_tag[p$y])]]) &&
     !is.null(dres[[paste0(cl, "_", e02c_tag[p$x])]]), logical(1)) ]
   per = bind_rows(lapply(cls, function(cl){
-    # per-subcluster trend-check uses nominal p < 0.05 (as the original); FDR<0.1
-    # leaves too few genes per single subcluster to see the trend.
+    # FDR < 0.1 leaves too few genes for subcluster trend checks.
     d = build_pair(dres[[paste0(cl, "_", e02c_tag[p$y])]], dres[[paste0(cl, "_", e02c_tag[p$x])]],
                    sig_col = "pval", sig_cut = 0.05)
     if (nrow(d) == 0) return(NULL)
@@ -364,18 +352,13 @@ dev.off()
 message("    Saved per-subcluster multipage PDF (one page per contrast pair)")
 
 
-##########################################################################
-# PART C - volcano plots (same aesthetic as the original E02c volcano, with
-#   slightly smaller dots). Two multipage PDFs, one volcano per page:
-#   C1 per subcluster x contrast (incl. cluster-vs-ref), from E02c
-#   C2 pooled, 4 contrasts at the 5-covariate model (M0), from E04c
-##########################################################################
+### Part C: volcano plots ----------------------------------------------------
 message("\n          *** PART C: volcano plots... ", Sys.time(), "\n")
 
-VDOT_OTHER = 0.7   # non-DEG point size (original = 1)
-VDOT_DEG   = 1.4   # DEG point size      (original = 2)
+VDOT_OTHER = 0.7   # non-DEG point size
+VDOT_DEG   = 1.4   # DEG point size
 
-# one volcano for a single results table; replicates the original E02c volcano
+# Volcano plot for one results table.
 volcano_plot = function(res, title){
   t1 = as.data.frame(res)
   t1$gene = if ("gene" %in% names(t1)) as.character(t1$gene) else rownames(t1)
@@ -386,7 +369,7 @@ volcano_plot = function(res, title){
   t1$gene_cat = "Other"
   t1$gene_cat[t1$DEG & t1$log2FoldChange > 0] = "up"
   t1$gene_cat[t1$DEG & t1$log2FoldChange < 0] = "down"
-  # label top 20 by p-value, top 20 by +log2FC, top 20 by -log2FC (as the original)
+  # Label the top 20 genes by p-value and by each log2FC direction.
   lab = unique(c(t1$gene[order(t1$pvalue)][1:20],
                  t1$gene[order(-t1$log2FoldChange)][1:20],
                  t1$gene[order(t1$log2FoldChange)][1:20]))

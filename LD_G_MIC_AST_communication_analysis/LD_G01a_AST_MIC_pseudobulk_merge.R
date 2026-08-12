@@ -30,10 +30,7 @@ covars_corr = c("cohort", "APOEgroup", "CD33Group", "BrainRegion")
 # 1. load AST and MIC pseudobulk objects
 ###########################################################
 
-# F03a1 outputs are used (rather than earlier E02a2) so WGCNA module fields are
-# available on the AST side if any downstream G03 section needs them. The
-# matrices we use (counts, meta) are identical across E02a2/E03a2/E03b2/F02a1/
-# F03a1 - they're computed once in E02a2 and carried through.
+# F03a1 supplies the AST WGCNA fields required downstream.
 
 message("\n\n          *** Load pseudobulk objects... ", Sys.time(), "\n\n")
 
@@ -54,10 +51,7 @@ cat("MIC: counts dim =", paste(dim(bulk_mic$counts), collapse = " x "),
 # 2. align gene sets across AST and MIC count matrices
 ###########################################################
 
-# Both pipelines start from the same upstream Seurat (Michael's snRNA-seq), so
-# in principle the gene sets should match. Intersecting defensively in case
-# upstream filtering (e.g. low-expression filter in E01) differed between
-# lineages, and reporting how many genes are dropped on each side.
+# Intersect defensively because lineage-specific upstream filtering may differ.
 
 message("\n\n          *** Align gene sets... ", Sys.time(), "\n\n")
 
@@ -148,9 +142,7 @@ if (length(mismatched_covars) > 0){
 # 4. tag each cluster_sample with its source lineage, then merge
 ###########################################################
 
-# Adding lineage as an explicit column (AST / MIC), so downstream we can filter
-# heatmaps by lineage (e.g. show ligand expression in MIC clusters and
-# receptor expression in AST clusters).
+# Record lineage for downstream source-target filtering.
 
 message("\n\n          *** Concatenate counts and metadata... ", Sys.time(), "\n\n")
 
@@ -162,8 +154,7 @@ meta_ast$lineage = "AST"
 meta_mic$lineage = "MIC"
 
 
-### cbind() requires identical row order (genes), rbind() requires identical columns;
-### already ensured above by the shared_genes subset and covar_cols_check intersect
+### merge aligned counts and metadata
 counts_comb = cbind(counts_ast, counts_mic)
 meta_comb   = rbind(meta_ast, meta_mic)
 rownames(meta_comb) = meta_comb$cluster_sample
@@ -191,7 +182,7 @@ counts_comb = counts_comb[, keep_cs]
 meta_comb   = meta_comb[keep_cs, , drop = FALSE]
 
 
-### factorise covariates to match levels Michael uses upstream (LD_E02a2 / F02)
+### factorise covariates to match upstream levels
 meta_comb$cohort                     = factor(meta_comb$cohort,
                                               levels = c("BiogenInitial", "BiogenExtra"))
 meta_comb$APOEgroup                  = factor(meta_comb$APOEgroup,

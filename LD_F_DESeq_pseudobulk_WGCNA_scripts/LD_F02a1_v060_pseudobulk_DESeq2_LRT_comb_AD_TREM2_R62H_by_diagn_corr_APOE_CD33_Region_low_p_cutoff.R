@@ -224,7 +224,7 @@ bulk_data$deseq_dataset_groups_clusters_combined = dds
 bulk_data$deseq_formula_groups_clusters_combined = list(form_full = form_full,
                                                         form_red = form_red)
 
-### extract vst norm expression matrix (based on all clusters combined), correct for covariates, calculate gene z-scores 
+### correct VST matrix and calculate gene z-scores
 
 dds = bulk_data$deseq_dataset_groups_clusters_combined
 
@@ -247,7 +247,7 @@ for (cov1 in covars_corr){
 
 bulk_data$vst_mat = vst_mat_corr
 
-#calculate Z-score per gene by pseudobulk (cluster_sample) for all clusters combined (from uncorrected and corrected vst matrix)
+# Gene z-scores across cluster-sample pseudobulks.
 cluster_sample_mat = t(apply(vst_mat, 1, scale))
 colnames(cluster_sample_mat) = colnames(vst_mat)
 bulk_data$gene_Z_scores_uncorr[["clusters_combined"]] = cluster_sample_mat
@@ -292,7 +292,7 @@ var_genes = names(v1[order(-v1)][1:3000])
 
 pl = list()
 
-cl = "AST_SLC1A2_s4"  # changed from HOM_s16 for MIC
+cl = "AST_SLC1A2_s4"
 
 for (cl in comp_clusters){
   

@@ -635,7 +635,7 @@ dev.off()
 # One page per group, two side-by-side panels per page:
 #   left  = filtered by raw pval < pval_cutoff_use
 #   right = filtered by BH-FDR padj < padj_cutoff_use
-# Lets you see what's lost to FDR correction.
+# Reports interactions lost after FDR correction.
 
 message("\n\n          *** MIC->AST-only per-pathway chord (custom)... ", Sys.time(), "\n\n")
 

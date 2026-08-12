@@ -1,13 +1,11 @@
 message("\n\n##########################################################################\n",
-        "# Start LD_E04a: Incremental covariate adjustment ", Sys.time(),
+        "# Start LD_E04c: Incremental covariate adjustment (5-covariate base) ", Sys.time(),
         "\n##########################################################################\n\n")
 
-# Covariates are added incrementally because the per-cluster, AD-only subsets
-# cannot support the full model without collinearity or unidentifiable terms.
-# Technical covariates are added before Braak because pathology correlates with
-# TREM2Variant and may remove part of the effect of interest.
-# Pooled results are exploratory because donors contribute several cluster
-# pseudobulks; cluster_name absorbs baseline between-cluster differences.
+# Age and PMI are added before Braak because Braak is a severity proxy correlated
+# with TREM2 genotype and may constitute over-adjustment. The pooled model is
+# exploratory because DESeq2 treats a donor's cluster pseudobulks independently.
+
 library(qs)
 library(tidyverse)
 library(DESeq2)
@@ -21,7 +19,7 @@ main_dir = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2/"
 setwd(main_dir)
 
 #specify script/output index as prefix for file names
-script_ind = "LD_E04a_v01_"
+script_ind = "LD_E04c_"
 
 #specify output directory
 out_dir = paste0(main_dir, "LD_E_DESeq_pseudobulk/")
@@ -34,9 +32,7 @@ bulk_data = qread(file = paste0(out_dir, "LD_E01_v02_bulk_data.qs"))
 ref_cluster = "AST_SLC1A2_s0"
 
 
-###########################################################
-# prepare metadata: factor categoricals, build numeric covariates
-###########################################################
+### prepare metadata --------------------------------------------------------
 
 meta = as.data.frame(bulk_data$meta)
 rownames(meta) = meta$cluster_sample
@@ -99,14 +95,13 @@ meta = droplevels(meta)
 bulk_data$meta = meta
 
 
-### gene universe = exactly the DEG-union E03 plotted
-# E03 restricts the scatter to unique(unlist(bulk_data$DEGs)) (union of DEGs,
-# padj<0.1, across ALL E02a2 comparisons). That same gene list was written by
-# E02a2 to DEGs_by_cluster_genes.csv (the TF columns are a subset, so the union
-# of all cells == unique(unlist($DEGs))). Reading the 1.8 MB CSV avoids loading
-# the 3.4 GB E02a2 .qs object just to extract a list of gene names.
+### gene universe = the DEG-union of the 5-covariate E02c results
+# Union of DEGs (padj<0.1) across all E02c comparisons, written by E02c to
+# DEGs_by_cluster_genes.csv (the TF columns are a subset, so the union of all
+# cells == unique(unlist($DEGs))). Reading the CSV avoids loading the 3.2 GB
+# E02c .qs object just to extract a list of gene names.
 
-deg_tab = read_csv(paste0(out_dir, "LD_E02a2_v02_DEGs_by_cluster_genes.csv"),
+deg_tab = read_csv(paste0(out_dir, "LD_E02c/LD_E02c_v01_DEGs_by_cluster_genes.csv"),
                    show_col_types = FALSE)
 deg_universe = unique(unlist(deg_tab, use.names = FALSE))
 deg_universe = deg_universe[!is.na(deg_universe) & deg_universe != ""]
@@ -123,26 +118,27 @@ comp_counts = m1[keep_genes, ]
 comp_clusters = unique(as.character(meta$cluster_name))
 
 
-###########################################################
-# define covariate levels (cumulative; "clean -> severity")
-###########################################################
+### cumulative covariate levels ---------------------------------------------
 
-base_covars = c("APOEgroup", "CD33Group", "BrainRegion")
+# baseline = the agreed 5-covariate model (E02c); increments added cumulatively
+# in "clean -> severity" order: Age and PMI (complete, demographic/technical) first,
+# Braak (severity proxy, correlates with TREM2 genotype) last as the over-correction test.
+base_covars = c("cohort", "APOEgroup", "CD33Group", "BrainRegion", "Sex")
 
 covar_sets = list(
-  M0_base            = base_covars,
-  M1_Sex             = c(base_covars, "Sex"),
-  M2_Sex_cohort      = c(base_covars, "Sex", "cohort"),
-  M3_Sex_cohort_PMI  = c(base_covars, "Sex", "cohort", "PMI_scaled"),
-  M4_..Age           = c(base_covars, "Sex", "cohort", "PMI_scaled", "Age_scaled"),
-  M5_..Braak         = c(base_covars, "Sex", "cohort", "PMI_scaled", "Age_scaled", "Braak_num")
+  M0_base          = base_covars,
+  M1_Age           = c(base_covars, "Age_scaled"),
+  M2_Age_PMI       = c(base_covars, "Age_scaled", "PMI_scaled"),
+  M3_Age_PMI_Braak = c(base_covars, "Age_scaled", "PMI_scaled", "Braak_num")
 )
 covar_levels = names(covar_sets)
 
+# display labels for the incremental columns (M0 model goes in the figure caption)
+covar_level_labels = c(M0_base = "M0", M1_Age = "+Age",
+                       M2_Age_PMI = "+PMI", M3_Age_PMI_Braak = "+Braak")
 
-###########################################################
-# define the 4 DESeq2 contrasts feeding the requested plots
-###########################################################
+
+### DESeq2 contrasts ---------------------------------------------------------
 # Each contrast = a subset of the data + a tested variable (and its reference
 # level). Reference levels preserve the E02a2 log2FC direction.
 
@@ -178,9 +174,7 @@ plot_pairs = list(
 )
 
 
-###########################################################
-# helper: guarded DESeq2 LRT run (refactored from E02a2)
-###########################################################
+### guarded DESeq2 LRT -------------------------------------------------------
 # Drops single-level / collinear covariates, omits the run if a covariate is
 # collinear with the tested variable or there are too few samples. Returns the
 # results table (or NULL) plus the final formulas and a log message.
@@ -262,12 +256,11 @@ run_deseq_guarded = function(meta_sub, counts_sub, covars, tested, add_cluster =
 }
 
 
-###########################################################
-# run all contrasts x covariate levels x scopes (parallel + resumable)
-###########################################################
+### run contrasts across covariate levels and scopes ------------------------
 # Independent LRTs are checkpointed for resumable parallel execution.
 # Delete the checkpoint directory if model or filtering settings change.
 
+# Refit M0 in every scope so the adjustment ladder uses one gene universe.
 scopes = c(as.character(comp_clusters), "pooled")
 
 ckpt_dir = paste0(out_dir, script_ind, "ckpt/")
@@ -341,200 +334,55 @@ bulk_data$E04_deseq_res = deseq_res
 bulk_data$E04_model_log = model_log
 qsave(bulk_data, file = paste0(out_dir, script_ind, "bulk_data.qs"))
 
+### robustness summary ------------------------------------------------------
+# Written as a small CSV so the supplementary table can be built on a laptop
+# without loading the .qs (which needs qs + this environment).
+#
+# TWO gene sets per cell, because they answer different questions:
+#   r_shared   - all genes of the E02c DEG universe tested in BOTH contrasts
+#   r_sig_both - genes significant in BOTH contrasts at padj < 0.1. This is the
+#                set the LD_X07 concordance panel plots and labels with r, so
+#                these are the values a reader can check against the figure.
 
-###########################################################
-# build per-pair log2FC tables (reg classification as in E03a2: pval<0.05)
-###########################################################
-
-# classify regulation direction from uncorrected p-value (matches E03a2)
-classify_reg = function(res){
-  reg = rep("nreg", nrow(res))
-  reg[!is.na(res$pvalue) & res$pvalue < 0.05 & res$log2FoldChange > 0] = "up"
-  reg[!is.na(res$pvalue) & res$pvalue < 0.05 & res$log2FoldChange < 0] = "down"
-  reg
+norm_res = function(res){
+  res = as.data.frame(res)
+  g = if ("gene" %in% names(res)) as.character(res$gene) else rownames(res)
+  tibble(gene = g, log2FC = res$log2FoldChange, padj = res$padj)
 }
 
-reg_levels = c("down_down", "up_up", "down_up", "up_down",
-               "down_nreg", "up_nreg", "nreg_down", "nreg_up", "nreg_nreg")
-reg_cols = c("down_down" = "blue", "up_up" = "red", "down_up" = "magenta3",
-             "up_down" = "magenta3", "down_nreg" = "grey40", "up_nreg" = "grey40",
-             "nreg_down" = "grey40", "nreg_up" = "grey40", "nreg_nreg" = "grey")
+# the three pairs shown in the LD_X07 concordance figure (y vs x)
+summary_pairs = list(
+  P_R62H_vs_AD  = c("R62H_vs_CV", "CV_AD_vs_Control"),
+  P_R47H_vs_AD  = c("R47H_vs_CV", "CV_AD_vs_Control"),
+  P_R62H_vs_R47H = c("R62H_vs_CV", "R47H_vs_CV")
+)
+SIG_CUT = 0.1
 
-# assemble a combined table per (scope, pair): one row per gene per covariate level
-build_pair_tab = function(scope, pair){
-  comp1   = pair[1]   # y-axis
-  comp_ref = pair[2]  # x-axis
-  out = NULL
-  for (level in covar_levels){
-    r1 = deseq_res[[paste(scope, level, comp1,   sep = "|")]]
-    r2 = deseq_res[[paste(scope, level, comp_ref, sep = "|")]]
-    if (is.null(r1) || is.null(r2)) next
-    g = intersect(intersect(r1$gene, r2$gene), deg_universe)   # E03 DEG-union restriction
-    r1 = r1[match(g, r1$gene), ]; r2 = r2[match(g, r2$gene), ]
-    t = tibble(level = level, gene = g,
-               log2FC = r1$log2FoldChange, pval = r1$pvalue,
-               log2FC_ref = r2$log2FoldChange, pval_ref = r2$pvalue)
-    t = t[!is.na(t$log2FC) & !is.na(t$log2FC_ref) & !is.na(t$pval) & !is.na(t$pval_ref), ]
-    if (nrow(t) == 0) next
-    t$reg      = classify_reg(tibble(log2FoldChange = t$log2FC,     pvalue = t$pval))
-    t$reg_ref  = classify_reg(tibble(log2FoldChange = t$log2FC_ref, pvalue = t$pval_ref))
-    t$reg_group = paste0(t$reg, "_", t$reg_ref)
-    out = rbind(out, t)
-  }
-  out
+r_of = function(x, y) if (length(x) >= 3) suppressWarnings(cor(x, y)) else NA_real_
+
+robust_tab = NULL
+for (scope in scopes) for (pn in names(summary_pairs)) for (level in covar_levels){
+  pr = summary_pairs[[pn]]
+  r1 = deseq_res[[paste(scope, level, pr[1], sep = "|")]]
+  r2 = deseq_res[[paste(scope, level, pr[2], sep = "|")]]
+  if (is.null(r1) || is.null(r2)) next
+  d = dplyr::inner_join(norm_res(r1), norm_res(r2), by = "gene", suffix = c("_y", "_x"))
+  d = d[d$gene %in% deg_universe, ]                       # same DEG universe as everywhere else
+  d = d[!is.na(d$log2FC_y) & !is.na(d$log2FC_x), ]
+  db = d[!is.na(d$padj_y) & !is.na(d$padj_x) & d$padj_y < SIG_CUT & d$padj_x < SIG_CUT, ]
+  robust_tab = rbind(robust_tab, tibble(
+    scope = scope, pair = pn, level = level,
+    n_shared = nrow(d),  r_shared   = r_of(d$log2FC_x,  d$log2FC_y),
+    n_sig_both = nrow(db), r_sig_both = r_of(db$log2FC_x, db$log2FC_y)))
 }
-
-
-###########################################################
-# robustness summary: slope / r / concordance vs covariate level
-###########################################################
-
-summary_tab = NULL
-
-for (scope in scopes){
-  for (pn in names(plot_pairs)){
-    tab = build_pair_tab(scope, plot_pairs[[pn]])
-    if (is.null(tab)) next
-    for (level in covar_levels){
-      d = tab[tab$level == level, ]
-      if (nrow(d) < 3) next
-      # genes regulated at p < 0.05 in both contrasts
-      db = d[d$reg != "nreg" & d$reg_ref != "nreg", ]
-      slope_fun = function(x) if (nrow(x) >= 3) unname(coef(lm(log2FC ~ log2FC_ref, x))[2]) else NA_real_
-      r_fun     = function(x) if (nrow(x) >= 3) suppressWarnings(cor(x$log2FC_ref, x$log2FC)) else NA_real_
-      conc_fun  = function(x) if (nrow(x) >= 1) mean(sign(x$log2FC) == sign(x$log2FC_ref)) else NA_real_
-      summary_tab = rbind(summary_tab, tibble(
-        scope = scope, pair = pn, level = level,
-        n_shared = nrow(d), r_shared = r_fun(d), slope_shared = slope_fun(d),
-        n_reg_both = nrow(db), r_reg_both = r_fun(db), slope_reg_both = slope_fun(db),
-        frac_concordant_reg_both = conc_fun(db)
-      ))
-    }
-  }
+if (!is.null(robust_tab)) {
+  robust_tab$level = factor(robust_tab$level, levels = covar_levels)
+  write_csv(robust_tab, file = paste0(out_dir, script_ind, "effect_robustness_summary.csv"))
+  message("   wrote effect_robustness_summary.csv (", nrow(robust_tab), " rows)")
 }
-
-summary_tab$level = factor(summary_tab$level, levels = covar_levels)
-write_csv(summary_tab, file = paste0(out_dir, script_ind, "effect_robustness_summary.csv"))
-
-
-### robustness plot: slope & Pearson r across covariate levels (reg_both genes)
-
-sl = summary_tab %>%
-  select(scope, pair, level, slope_reg_both, r_reg_both) %>%
-  pivot_longer(c(slope_reg_both, r_reg_both), names_to = "metric", values_to = "value") %>%
-  mutate(metric = recode(metric, slope_reg_both = "regression slope", r_reg_both = "Pearson r"))
-
-p_rob = ggplot(sl, aes(x = level, y = value, group = metric, colour = metric)) +
-  geom_hline(yintercept = 0, linewidth = 0.3, colour = "grey60") +
-  geom_line() + geom_point() +
-  facet_grid(scope ~ pair) +
-  scale_colour_manual(values = c("regression slope" = "dodgerblue", "Pearson r" = "orange")) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
-  labs(title = "Robustness of log2FC correlation to covariate adjustment (reg_both genes)",
-       x = "covariate adjustment level", y = "slope / Pearson r")
-
-pdf(file = paste0(out_dir, script_ind, "effect_robustness_slope_r_vs_covar_level.pdf"),
-    width = 16, height = 10)
-plot(p_rob)
-dev.off()
-
-
-###########################################################
-# scatter plots: reg_both genes, faceted by covariate level
-###########################################################
-# One page per (scope x pair). Facets = covariate levels (M0..M5) so any
-# weakening / sign change of the slope is visible across the row. Fixed axis
-# limits across facets so magnitude changes are comparable.
-
-make_facet_plot = function(tab, title){
-  d = tab[tab$reg != "nreg" & tab$reg_ref != "nreg", ]   # reg_both
-  if (is.null(d) || nrow(d) < 3) return(NULL)
-  d$level = factor(d$level, levels = covar_levels)
-
-  # label up to 6 genes furthest from origin per facet
-  d$label = ""
-  for (lv in unique(d$level)){
-    idx = which(d$level == lv)
-    dist = sqrt(d$log2FC[idx]^2 + d$log2FC_ref[idx]^2)
-    top = idx[order(-dist)][seq_len(min(6, length(idx)))]
-    d$label[top] = d$gene[top]
-  }
-  d = d[order(match(d$reg_group, reg_levels)), ]
-
-  # per-facet slope/r annotation
-  stat = do.call(rbind, lapply(split(d, d$level), function(x){
-    tibble(level = x$level[1], n = nrow(x),
-           slope = if (nrow(x) >= 3) unname(coef(lm(log2FC ~ log2FC_ref, x))[2]) else NA_real_,
-           r = if (nrow(x) >= 3) suppressWarnings(cor(x$log2FC_ref, x$log2FC)) else NA_real_)
-  }))
-  stat$level = factor(stat$level, levels = covar_levels)
-  stat$lab = paste0("n=", stat$n,
-                    "\nslope=", round(stat$slope, 2),
-                    "\nr=", round(stat$r, 2))
-
-  lim = max(abs(c(d$log2FC, d$log2FC_ref)), na.rm = TRUE)
-
-  ggplot(d, aes(x = log2FC_ref, y = log2FC, colour = reg_group)) +
-    geom_vline(xintercept = 0, linewidth = 0.3, colour = "grey30") +
-    geom_hline(yintercept = 0, linewidth = 0.3, colour = "grey30") +
-    geom_smooth(colour = "grey30", method = "lm", formula = y ~ x, se = TRUE) +
-    geom_point(alpha = 0.8, size = 1.6) +
-    geom_label_repel(aes(label = label), seed = 42, size = 2.4,
-                     min.segment.length = 0.2, max.overlaps = Inf, max.time = 3) +
-    geom_text(data = stat, aes(x = -lim, y = lim, label = lab),
-              inherit.aes = FALSE, hjust = 0, vjust = 1, size = 2.8, colour = "grey20") +
-    scale_colour_manual(limits = reg_levels, values = reg_cols) +
-    coord_cartesian(xlim = c(-lim, lim), ylim = c(-lim, lim)) +
-    facet_wrap(~ level, nrow = 1) +
-    theme_minimal() +
-    theme(legend.position = "bottom") +
-    labs(title = title,
-         x = "log2FC (x-axis contrast)", y = "log2FC (y-axis contrast)")
-}
-
-### per-cluster PDF
-
-pl = list()
-for (pn in names(plot_pairs)){
-  for (cl in as.character(comp_clusters)){
-    tab = build_pair_tab(cl, plot_pairs[[pn]])
-    if (is.null(tab)) next
-    ttl = paste0(cl, "  |  ", pn, "   (y = ", plot_pairs[[pn]][1],
-                 " , x = ", plot_pairs[[pn]][2], ")")
-    p = make_facet_plot(tab, ttl)
-    if (!is.null(p)) pl[[paste0(pn, "__", cl)]] = p
-  }
-}
-
-pdf(file = paste0(out_dir, script_ind, "Log2FC_corr_reg_both_per_cluster.pdf"),
-    width = 18, height = 5)
-for (p in pl) plot(p)
-dev.off()
-
-
-### pooled PDF
-
-pl = list()
-for (pn in names(plot_pairs)){
-  tab = build_pair_tab("pooled", plot_pairs[[pn]])
-  if (is.null(tab)) next
-  ttl = paste0("POOLED (all clusters)  |  ", pn, "   (y = ", plot_pairs[[pn]][1],
-               " , x = ", plot_pairs[[pn]][2], ")")
-  p = make_facet_plot(tab, ttl)
-  if (!is.null(p)) pl[[pn]] = p
-}
-
-pdf(file = paste0(out_dir, script_ind, "Log2FC_corr_reg_both_pooled.pdf"),
-    width = 18, height = 5)
-for (p in pl) plot(p)
-dev.off()
-
-
-#get info on version of R, used packages etc
-sessionInfo()
 
 message("\n\n##########################################################################\n",
-        "# Completed LD_E04a ", Sys.time(),
-        "\n##########################################################################\n",
-        "\n##########################################################################\n\n\n")
+        "# Completed LD_E04c ", Sys.time(),
+        "\n##########################################################################\n\n")
+
+sessionInfo()

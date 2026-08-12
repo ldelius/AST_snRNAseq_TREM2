@@ -35,7 +35,7 @@ script_ind = "LD_H01_v02_"
 bulk_data = qread(file = paste0(main_dir, "LD_F_DESeq_pseudobulk_WGCNA/LD_F01_v02_bulk_data.qs"))
 
 
-###select cluster_samples to keep (match Michael: drop Controls, drop NA BrainRegion/APOEgroup)
+### select cluster-samples: exclude Controls and missing BrainRegion/APOEgroup
 
 t1 = as.data.frame(bulk_data$meta)
 rownames(t1) = t1$cluster_sample
@@ -91,7 +91,7 @@ bulk_data$counts = m2
 
 identical(t1$cluster_sample, colnames(m2))
 
-# REQUIRED: define your primary variable(s) of interest
+# Primary variable of interest
 primary_var <- c("TREM2Variant")
 
 # Candidate covariates to consider
@@ -105,8 +105,8 @@ candidate_covars <- c("cluster_name", "cohort", "PMI_scaled","RNA_counts_scaled"
                        )
 
 
-### drop rows with NA in any modelled covariate (needed for AST data: CD33Group/Braak/PMI
-### contain NAs that Michael's data did not; fitExtractVarPartModel cannot fit NA terms)
+### drop rows with NA in any modelled covariate
+# fitExtractVarPartModel cannot fit missing model terms.
 
 vars_model = c(candidate_covars, primary_var)
 
@@ -164,7 +164,7 @@ bulk_data$counts = comp_counts
 ####################################################################################
 # Test impact of covariates with variancePartition (categorical as random effects)
 ####################################################################################
-#  as recommended: https://www.bioconductor.org/packages/release/bioc/vignettes/variancePartition/inst/doc/variancePartition.html)
+# Model specification follows the variancePartition vignette.
 
 counts  <- bulk_data$counts
 meta <- as.data.frame(bulk_data$meta)

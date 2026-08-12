@@ -52,7 +52,7 @@ form_corr = ~ (1 | cluster_name) + (1 | Braak) +
   PMI_scaled + RNA_counts_scaled + Age_scaled + plaque_dens_scaled +
   pctAT8PositiveArea + pctPHF1PositiveArea + pct4G8PositiveArea
 
-###get marker gene panels (Fantom5 transcription factors, from Michael's input folder)
+### get Fantom5 transcription-factor panel
 GOI = list()
 t1 = read_csv(paste0(main_dir,"data_TREM2_michael/A_input/Transcription Factors hg19 - Fantom5_21-12-21.csv"))
 GOI$TF = t1$Symbol
@@ -125,9 +125,7 @@ create_heatmap_annot = function(annot_df, annot_dim = c("column", "row"),
 #######################################
 # plot variance explained by primary variable per gene (ranked)
 #######################################
-# Michael had 2 primary vars and plotted prim_vars[1] vs prim_vars[2]. With a
-# single primary variable (TREM2Variant) we instead rank genes by the fraction
-# of variance it explains and overlay the extraction thresholds.
+# Rank genes by the TREM2Variant variance fraction and show extraction thresholds.
 
 t1 = bulk_data$varPart_analysis$varPart
 
@@ -290,16 +288,10 @@ colnames(z_mat) = colnames(vst_mat)
 bulk_data$gene_Z_scores_uncorr = z_mat
 
 
-# extract covariate-corrected residuals per gene
-# NB: we fit with lme4::lmer DIRECTLY instead of variancePartition::fitVarPartModel.
-# fitVarPartModel imports the deprecated lme4::findbars stub, which errors under
-# lme4 >= 2.0 (findbars moved to the 'reformulas' package). lmer itself works fine
-# (it is the same engine behind H01's fitExtractVarPartModel), so we fit the same
-# model - gene expression ~ covariates (mixed effects, REML) - and take residuals.
-# Each fit is wrapped in tryCatch so a singular / non-converging gene cannot abort
-# the whole job; such genes fall back to mean-centring and are reported.
-# parallel backend (same as LD_H01) speeds up the per-gene mixed-model fit
-param <- SnowParam(6, "SOCK", progressbar = TRUE)   # adjust cores to your qsub request
+# Extract covariate-corrected residuals per gene. fitVarPartModel is incompatible
+# with lme4 >= 2.0, so fit the same REML model directly with lmer. Failed fits are
+# reported and fall back to mean-centring.
+param <- SnowParam(6, "SOCK", progressbar = TRUE)
 
 # align meta rows to expression columns, build the response formula (y ~ covariates)
 meta = meta[colnames(vst_mat), ]
