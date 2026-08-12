@@ -19,7 +19,7 @@ green_csv  = file.path(base, "data_TREM2_michael/A_input/Green24_S2_subpopulatio
 clust_csv  = file.path(base, "LD_B_AST_analysis_output/LD_B03a_cluster_assignment.csv")
 out_dir    = file.path(base, "LD_X_Thesis_Presentation_output")
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-script_ind = "LD_X04_v02_"
+script_ind = "LD_X04_v03_"
 for (p in c(b04_path, green_csv, clust_csv))
   if (!file.exists(p)) stop("Missing input: ", p)
 
@@ -56,16 +56,16 @@ score_cols = paste0("greenAst", seq_along(ast_states))   # greenAst1 == Ast.1, .
 
 # display labels for the 10 Green astrocyte states (order = Ast.1 -> Ast.10)
 green_labels = c(
-  "AST1_homeostatic",
-  "AST2_homeostatic",
-  "Ast3_enh_mitophagy",
-  "Ast4_reactive",
-  "Ast5_reactive",
+  "Ast1 homeostatic",
+  "Ast2 homeostatic",
+  "Ast3 enhanced mitophagy",
+  "Ast4 reactive",
+  "Ast5 reactive",
   "Ast6",
-  "Ast7_IFN_response",
-  "Ast8_stress response",
-  "Ast9_stress response",
-  "Ast10_disease_associated")
+  "Ast7 IFN response",
+  "Ast8 stress response",
+  "Ast9 stress response",
+  "Ast10 AD-elevated")
 names(green_labels) = score_cols
 
 # draw a rectangle around a block of the dot grid, given the group of x labels
@@ -90,13 +90,13 @@ p_green = DotPlot(seur, features = score_cols, group.by = "cluster_name",
                   scale.by = "size") +
   scale_x_discrete(labels = green_labels) +
   scale_y_discrete(limits = rev(cluster_names)) +
-  highlight_box(c("AST1_homeostatic", "AST2_homeostatic"), slc1a2_clusters) +
-  highlight_box("Ast4_reactive", gfap_clusters) +
-  highlight_box("Ast5_reactive", chi3l1_clusters) +
-  highlight_box("Ast3_enh_mitophagy", c("AST_CHI3L1_s9", "AST_CHI3L1_s16"),
+  highlight_box(c("Ast1 homeostatic", "Ast2 homeostatic"), slc1a2_clusters) +
+  highlight_box("Ast4 reactive", gfap_clusters) +
+  highlight_box("Ast5 reactive", chi3l1_clusters) +
+  highlight_box("Ast3 enhanced mitophagy", c("AST_CHI3L1_s9", "AST_CHI3L1_s16"),
                 colour = "grey50") +
-  highlight_box("Ast7_IFN_response", chi3l1_clusters, colour = "grey50") +
-  highlight_box(c("Ast8_stress response", "Ast9_stress response", "Ast10_disease_driving"),
+  highlight_box("Ast7 IFN response", chi3l1_clusters, colour = "grey50") +
+  highlight_box(c("Ast8 stress response", "Ast9 stress response", "Ast10 AD-elevated"),
                 "AST_CHI3L1_s9", colour = "grey50") +
   labs(x = "Green et al. (2024) astrocyte state",
        y = "Astrocyte subcluster",
@@ -111,6 +111,12 @@ ggsave(file.path(out_dir, paste0(script_ind, "Green24_module_score_dotplot.pdf")
 ggsave(file.path(out_dir, paste0(script_ind, "Green24_module_score_dotplot.png")),
        p_green, width = 8, height = 7, dpi = 300)
 message("Plot 1 (Green24 dot plot) written.")
+
+# NB: the "does the state<->subcluster mapping survive removing SLC1A2/GFAP/CHI3L1
+# from the state signatures" sensitivity check now lives in its own script,
+# LD_X04c_green_state_LOO_sensitivity.R, so it can be run without also paying for
+# the FindAllMarkers/GO section below (that's what was hitting the OnDemand
+# session memory limit).
 
 ################################################################################
 # Table: per-subcluster abundance (% of its subtype, and % of all astrocytes)
@@ -213,7 +219,12 @@ make_go_dotplot = function(res, clusters, n_terms, suffix, title, exclude_terms 
     # add = 0.55 trims the empty margin on either side so columns sit closer together
     scale_x_discrete(limits = clusters, drop = FALSE, expand = expansion(add = 0.55)) +
     scale_size_continuous(name = "Gene count", range = c(1, 6)) +
-    scale_colour_gradient(name = "-log10(adj. p)", low = "blue", high = "red") +   # red = more significant, as in B04a
+    # grey -> black: GO enrichment here is magnitude-only (all gene lists are
+    # only.pos = TRUE markers, so there is no "down" direction to represent) -
+    # an achromatic ramp avoids the blue/orange hue family used for the genuinely
+    # signed Green24 z-scores elsewhere in this figure group, so darker here can't
+    # be misread as "toward the negative/blue end" of that unrelated scale
+    scale_colour_gradient(name = "-log10(adj. p)", low = "grey80", high = "black") +
     labs(title = title, x = NULL, y = NULL) +
     theme_bw(base_size = 13)
 

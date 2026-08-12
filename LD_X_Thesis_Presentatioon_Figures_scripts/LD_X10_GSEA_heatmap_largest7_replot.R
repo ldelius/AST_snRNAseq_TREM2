@@ -18,7 +18,7 @@ base    = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2"
 gsea_csv = file.path(base, "LD_E_DESeq_pseudobulk/LD_E03c_GSEA_results.csv")
 out_dir  = file.path(base, "LD_X_Thesis_Presentation_output")
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-script_ind = "LD_X10_"
+script_ind = "LD_X10_v02_"
 if (!file.exists(gsea_csv)) stop("Missing input: ", gsea_csv)
 
 gsea_res_tab = read_csv(gsea_csv, show_col_types = FALSE)
@@ -120,12 +120,10 @@ hallmark_family = c(
   HALLMARK_PEROXISOME="cellular_component")
 fam_levels = c("immune", "signaling", "pathway", "metabolic", "proliferation",
                "DNA_damage", "development", "cellular_component", "other")
-# pheatmap's default annotation colours for this exact 9-level factor (extracted via
-# pheatmap:::generate_annotation_colours), hardcoded so the switch to ComplexHeatmap
-# (whose own default palette differs) doesn't change the family colours you're used to
-fam_colors = c(immune = "#FF9289", signaling = "#FF80DE", pathway = "#AEC500",
-              metabolic = "#F590FF", proliferation = "#82B7FF", DNA_damage = "#F0AD00",
-              development = "#00D65C", cellular_component = "#00D4FF", other = "#00DCBA")
+# same colourblind-safe palette convention as the rest of the thesis (X02 UMAP):
+# viridis for >8 categories (9 families here exceeds Okabe-Ito's 8), instead of
+# pheatmap's arbitrary auto-generated pastel colours
+fam_colors = set_names(scales::viridis_pal(option = "viridis")(length(fam_levels)), fam_levels)
 
 # Hallmark terms dropped for simplicity (not statistically excluded - just
 # hidden from this plot; still present in LD_E03c_GSEA_results.csv/other plots)
@@ -142,16 +140,16 @@ hallmark_drop_terms = c(
 # Green24 state display labels - identical text to green_labels in
 # LD_X04_B_characterisation_plots.R (order = Ast.1 -> Ast.10)
 green_state_labels = c(
-  "Green24_Ast.1"  = "AST1_homeostatic",
-  "Green24_Ast.2"  = "AST2_homeostatic",
-  "Green24_Ast.3"  = "Ast3_enh_mitophagy",
-  "Green24_Ast.4"  = "Ast4_reactive",
-  "Green24_Ast.5"  = "Ast5_reactive",
+  "Green24_Ast.1"  = "Ast1 homeostatic",
+  "Green24_Ast.2"  = "Ast2 homeostatic",
+  "Green24_Ast.3"  = "Ast3 enhanced mitophagy",
+  "Green24_Ast.4"  = "Ast4 reactive",
+  "Green24_Ast.5"  = "Ast5 reactive",
   "Green24_Ast.6"  = "Ast6",
-  "Green24_Ast.7"  = "Ast7_IFN_response",
-  "Green24_Ast.8"  = "Ast8_stress response",
-  "Green24_Ast.9"  = "Ast9_stress response",
-  "Green24_Ast.10" = "Ast10_disease_associated"
+  "Green24_Ast.7"  = "Ast7 IFN response",
+  "Green24_Ast.8"  = "Ast8 stress response",
+  "Green24_Ast.9"  = "Ast9 stress response",
+  "Green24_Ast.10" = "Ast10 AD-elevated"
 )
 
 # draw one NES heatmap (a single matrix) to PDF and PNG. Columns are split into
@@ -183,7 +181,9 @@ draw_heatmap = function(mat, collection, fbase){
   }
 
   lim = max(abs(mat))
-  col_fun = colorRamp2(c(-lim, 0, lim), c("blue", "white", "red"))
+  # same up/down convention as the rest of the thesis (Green24 z-scores, DEG
+  # panel, pairwise concordance): blue = down/negative NES, orange = up/positive
+  col_fun = colorRamp2(c(-lim, 0, lim), c("#0072B2", "white", "#E69F00"))
   W = ncol(mat) * 0.20 + 5
   H = nrow(mat) * 0.18 + 3
 

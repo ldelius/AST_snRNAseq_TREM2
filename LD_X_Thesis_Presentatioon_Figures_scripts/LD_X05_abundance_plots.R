@@ -25,9 +25,14 @@ base       = "/rds/general/user/lvd25/home/AST_scRNAseq_TREM2"
 b04_path   = file.path(base, "LD_B_AST_analysis_output/LD_B04a_v02_seur.qs")
 clust_csv  = file.path(base, "LD_B_AST_analysis_output/LD_B03a_cluster_assignment.csv")
 group_csv  = file.path(base, "data_TREM2_michael/A_input/group_tab.csv")
-out_dir    = file.path(base, "LD_X_Thesis_Presentation_output")
+# v05: identical models to v03; the only change is that run_contrasts() now also
+# keeps c_effect / c_lower / c_upper. New index so the v03 outputs (already used
+# in the current figures and tables) are not overwritten while this reruns.
+# This run writes into its own subfolder: LD_X05 emits ~40 CSVs and plots, which
+# otherwise bury the rest of the thesis-figure output directory.
+script_ind = "LD_X05_v05_"
+out_dir    = file.path(base, "LD_X_Thesis_Presentation_output", "LD_X05_v05_abundance")
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
-script_ind = "LD_X05_"
 cores_n    = 8
 ref_group  = "Control_CV"
 fdr_cut    = 0.05
@@ -99,8 +104,13 @@ run_contrasts = function(ct, covars = character(0)) {
   if (!"factor" %in% names(r) && "parameter" %in% names(r)) r$factor = r$parameter
   par_col = intersect(c("parameter", "factor"), names(r))[1]
   cg_col  = intersect(c("cellgroup", "cell_group"), names(r))[1]
+  # keep the effect estimate and credible interval alongside the FDR: the earlier
+  # version discarded them, which left the supplementary tables able to report
+  # significance but not direction or magnitude. Kept only if sccomp returned them.
+  eff_cols = intersect(c("c_effect", "c_lower", "c_upper"), names(r))
   r %>% dplyr::transmute(cellgroup = .data[[cg_col]],
-                         comparison = .data[[par_col]], c_FDR = c_FDR) %>%
+                         comparison = .data[[par_col]], c_FDR = c_FDR,
+                         dplyr::across(dplyr::all_of(eff_cols))) %>%
     dplyr::mutate(comparison = ifelse(comparison %in% comps$name, comparison,
                                       names(cstr)[match(comparison, cstr)]))
 }
@@ -131,7 +141,12 @@ plot_dodge = function(ct, unit_order, title, by_region = FALSE) {
 }
 
 ### (B) bracket boxplot (significant contrasts only) ------------------------
-bracket_boxplot = function(ct, unit_order, sig, title, ncol = NULL, by_region = FALSE, model = "") {
+# fixed_y1 = TRUE: shared/fixed 0-1 y-axis across facets, instead of each facet
+# auto-scaling to its own max (free_y). Matters when comparing groups with very
+# different typical fractions (e.g. subtypes: SLC1A2 ~65-70%, GFAP ~25%,
+# CHI3L1 ~5%) - under free_y they all look "similarly variable"; fixed to a
+# shared 0-1 scale, the real size differences between them become visible too.
+bracket_boxplot = function(ct, unit_order, sig, title, ncol = NULL, by_region = FALSE, model = "", fixed_y1 = FALSE) {
   ct = ct %>% dplyr::mutate(cellgroup = factor(cellgroup, levels = unit_order), group = factor(group, levels = gr))
   gkeys = if (by_region) c("cellgroup", "BrainRegion") else "cellgroup"
   ymax = ct %>% dplyr::group_by(dplyr::across(dplyr::all_of(gkeys))) %>%
@@ -155,7 +170,11 @@ bracket_boxplot = function(ct, unit_order, sig, title, ncol = NULL, by_region = 
     geom_boxplot(aes(fill = group), outlier.shape = NA, linewidth = 0.3) +
     geom_jitter(width = 0.15, size = 0.5, alpha = 0.6) +
     scale_fill_manual(values = group_cols, guide = "none") +
-    scale_y_continuous(expand = expansion(mult = c(0.05, 0.28))) +
+    # fixed_y1: hard 0-1 range - note this can clip a significance bracket that
+    # would otherwise sit above y=1 for an already-near-1 group (none currently
+    # do; worth checking if fixed_y1 is ever used on a group with ymax > ~0.85)
+    (if (fixed_y1) scale_y_continuous(limits = c(0, 1), expand = expansion(mult = c(0.01, 0.05)))
+     else           scale_y_continuous(expand = expansion(mult = c(0.05, 0.28)))) +
     labs(title = title, x = NULL, y = "Fraction of sample",
          caption = paste0("model: ", model, "   |   brackets: significant sccomp contrasts (FDR < 0.05)")) +
     theme_bw(base_size = 10) +
@@ -163,7 +182,7 @@ bracket_boxplot = function(ct, unit_order, sig, title, ncol = NULL, by_region = 
           plot.title = element_text(hjust = 0.5, face = "bold"),
           plot.caption = element_text(size = 7)) +
     (if (by_region) facet_grid(cellgroup ~ BrainRegion, scales = "free_y")
-     else facet_wrap(~ cellgroup, scales = "free_y", ncol = ncol))
+     else facet_wrap(~ cellgroup, scales = if (fixed_y1) "fixed" else "free_y", ncol = ncol))
   if (!is.null(brk) && nrow(brk) > 0)
     p = p +
       geom_segment(data = brk, aes(x = x, xend = xend, y = y, yend = y), inherit.aes = FALSE, linewidth = 0.25) +
@@ -222,9 +241,10 @@ f_un     = "~ 0 + group"
 f_aj     = paste("~ 0 + group +", paste(covars, collapse = " + "))
 f_aj_reg = paste("~ 0 + group +", paste(setdiff(covars, "BrainRegion"), collapse = " + "))  # region constant within facet
 ct_two = dplyr::filter(ct_cluster, cellgroup %in% sel_clusters)
-# subtypes
-save_plot(bracket_boxplot(ct_subtype, subtype_levels, sig_subtype_un, "Subtype abundance (unadjusted)", ncol = 3, model = f_un), "sig_subtype_unadj", 9, 4)
-save_plot(bracket_boxplot(ct_subtype, subtype_levels, sig_subtype_aj, "Subtype abundance (covariate-adjusted)", ncol = 3, model = f_aj), "sig_subtype_adj", 9, 4)
+# subtypes - fixed_y1 = TRUE (shared 0-1 y-axis; see LD_X05_v02_subtype_abundance_plot.R,
+# which established this makes the SLC1A2/GFAP/CHI3L1 size difference visible)
+save_plot(bracket_boxplot(ct_subtype, subtype_levels, sig_subtype_un, "Subtype abundance (unadjusted)", ncol = 3, model = f_un, fixed_y1 = TRUE), "sig_subtype_unadj", 9, 4)
+save_plot(bracket_boxplot(ct_subtype, subtype_levels, sig_subtype_aj, "Subtype abundance (covariate-adjusted)", ncol = 3, model = f_aj, fixed_y1 = TRUE), "sig_subtype_adj", 9, 4)
 # two largest per subtype
 save_plot(bracket_boxplot(ct_two, sel_clusters, sig_filt(sig_cluster_un, sel_clusters), "Two largest per subtype (unadjusted)", ncol = 3, model = f_un), "sig_two_largest_unadj", 10, 7)
 save_plot(bracket_boxplot(ct_two, sel_clusters, sig_filt(sig_cluster_aj, sel_clusters), "Two largest per subtype (covariate-adjusted)", ncol = 3, model = f_aj), "sig_two_largest_adj", 10, 7)
@@ -236,3 +256,93 @@ save_plot(bracket_boxplot(ct_subtype, subtype_levels, sig_region_un, "Subtype by
 save_plot(bracket_boxplot(ct_subtype, subtype_levels, sig_region_aj, "Subtype by region (covariate-adjusted)", by_region = TRUE, model = f_aj_reg), "sig_subtype_by_region_adj", 8, 7)
 
 message("Done. Abundance overviews, sccomp bracket boxplots and contrast tables written to ", out_dir)
+
+################################################################################
+# NEW: donor-level sccomp (addresses pseudoreplication - 47 of 70 donors
+# contribute 2 brain-region samples each, so sample-level treats those
+# non-independent samples as independent observations). Aggregates counts to
+# one row per DONOR (summed across that donor's sample(s)), then reuses the
+# SAME run_contrasts()/plot_dodge()/bracket_boxplot() machinery as above for
+# consistency - the donor ID is put in a column literally called "sample" so
+# run_contrasts() (`.sample = sample`) works completely unchanged. BrainRegion
+# is dropped from the donor-level covariate set: it isn't a well-defined
+# single value for the 47 donors whose counts are pooled across both regions.
+# Purely additive - nothing above is modified or overwritten.
+################################################################################
+
+donor_col  = "BrainBankNetworkIDFormatted"
+samp_donor = grtab %>% dplyr::distinct(sample, donor = .data[[donor_col]])
+
+# donor-level covariates (one row per donor): group/Sex/APOEgroup/CD33Group/
+# cohort should all be constant within a donor (donor attributes, not
+# sample/region attributes) - check that assumption rather than silently
+# taking the first value per donor.
+donor_covar_check = grtab %>% dplyr::mutate(donor = .data[[donor_col]]) %>%
+  dplyr::group_by(donor) %>%
+  dplyr::summarise(dplyr::across(c(group, Sex, APOEgroup, CD33Group, cohort), dplyr::n_distinct),
+                   .groups = "drop")
+donor_covar_bad = donor_covar_check %>% dplyr::filter(dplyr::if_any(-donor, ~ . > 1))
+if (nrow(donor_covar_bad) > 0) {
+  message("WARNING: donors with inconsistent covariates across their samples (using first value):")
+  print(as.data.frame(donor_covar_bad))
+}
+donor_meta = grtab %>% dplyr::mutate(donor = .data[[donor_col]]) %>%
+  dplyr::group_by(donor) %>%
+  dplyr::summarise(group = dplyr::first(group), Sex = dplyr::first(Sex),
+                   APOEgroup = dplyr::first(APOEgroup), CD33Group = dplyr::first(CD33Group),
+                   cohort = dplyr::first(cohort), .groups = "drop") %>%
+  dplyr::rename(sample = donor)   # so run_contrasts()'s `.sample = sample` needs no changes
+
+covars_donor = setdiff(covars, "BrainRegion")   # not well-defined once pooled across regions
+
+# aggregate an existing SAMPLE-level counts table (ct_cluster / ct_subtype,
+# already built above) to donor level
+to_donor_level = function(ct_sample) {
+  ct_sample %>%
+    dplyr::left_join(samp_donor, by = "sample") %>%
+    dplyr::group_by(donor, cellgroup) %>%
+    dplyr::summarise(N_cells = sum(N_cells), .groups = "drop") %>%
+    dplyr::rename(sample = donor) %>%
+    dplyr::left_join(donor_meta, by = "sample") %>%
+    dplyr::group_by(sample) %>%
+    dplyr::mutate(N_sample = sum(N_cells),
+                  fract_sample = ifelse(N_sample > 0, N_cells / N_sample, 0)) %>%
+    dplyr::ungroup()
+}
+
+ct_cluster_donor = to_donor_level(ct_cluster)
+ct_subtype_donor = to_donor_level(ct_subtype)
+write_csv(ct_cluster_donor, file.path(out_dir, paste0(script_ind, "abundance_by_subcluster_DONORLEVEL.csv")))
+write_csv(ct_subtype_donor, file.path(out_dir, paste0(script_ind, "abundance_by_subtype_DONORLEVEL.csv")))
+
+message("sccomp subclusters, DONOR level (unadjusted)..."); sig_cluster_donor_un = safe(run_contrasts(ct_cluster_donor))
+message("sccomp subclusters, DONOR level (adjusted)...");   sig_cluster_donor_aj = safe(run_contrasts(ct_cluster_donor, covars_donor))
+message("sccomp subtypes, DONOR level (unadjusted)...");    sig_subtype_donor_un = safe(run_contrasts(ct_subtype_donor))
+message("sccomp subtypes, DONOR level (adjusted)...");      sig_subtype_donor_aj = safe(run_contrasts(ct_subtype_donor, covars_donor))
+
+wr(sig_cluster_donor_un, "sccomp_subclusters_DONORLEVEL_unadj"); wr(sig_cluster_donor_aj, "sccomp_subclusters_DONORLEVEL_adj")
+wr(sig_subtype_donor_un, "sccomp_subtypes_DONORLEVEL_unadj");    wr(sig_subtype_donor_aj, "sccomp_subtypes_DONORLEVEL_adj")
+
+### donor-level figures (same style as sample-level above) -------------------
+f_un_donor = "~ 0 + group  [donor-level: counts summed per donor across sample(s)]"
+f_aj_donor = paste0("~ 0 + group + ", paste(covars_donor, collapse = " + "), "  [donor-level]")
+
+save_plot(plot_dodge(ct_subtype_donor, subtype_levels, "Subtype abundance, donor level (pooled)"),
+         "overview_subtype_DONORLEVEL", 5, 4)
+save_plot(bracket_boxplot(ct_subtype_donor, subtype_levels, sig_subtype_donor_un,
+                          "Subtype abundance, donor level (unadjusted)", ncol = 3, model = f_un_donor, fixed_y1 = TRUE),
+         "sig_subtype_DONORLEVEL_unadj", 9, 4)
+save_plot(bracket_boxplot(ct_subtype_donor, subtype_levels, sig_subtype_donor_aj,
+                          "Subtype abundance, donor level (covariate-adjusted)", ncol = 3, model = f_aj_donor, fixed_y1 = TRUE),
+         "sig_subtype_DONORLEVEL_adj", 9, 4)
+
+save_plot(plot_dodge(ct_cluster_donor, cluster_names, "Subcluster abundance, donor level (all)"),
+         "overview_all_subclusters_DONORLEVEL", 12, 4)
+save_plot(bracket_boxplot(ct_cluster_donor, cluster_names, sig_cluster_donor_un,
+                          "All subclusters, donor level (unadjusted)", ncol = 6, model = f_un_donor),
+         "sig_all_subclusters_DONORLEVEL_unadj", 16, 12)
+save_plot(bracket_boxplot(ct_cluster_donor, cluster_names, sig_cluster_donor_aj,
+                          "All subclusters, donor level (covariate-adjusted)", ncol = 6, model = f_aj_donor),
+         "sig_all_subclusters_DONORLEVEL_adj", 16, 12)
+
+message("Done. Donor-level sccomp abundance analysis written to ", out_dir)
